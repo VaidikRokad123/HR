@@ -32,7 +32,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--primary);
+  background: linear-gradient(90deg, #e8650a 0%, #f5a05a 35%, #1d9e75 65%, #0f6e56 100%);
 }
 
 .auth-card h2 {
@@ -95,17 +95,17 @@
 }
 
 .wizard-step.active .wizard-step-number {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #000000;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+  background: var(--saffron);
+  border-color: var(--saffron);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(232, 101, 10, 0.2);
   transform: scale(1.1);
 }
 
 .wizard-step.completed .wizard-step-number {
-  background: var(--primary-dark);
-  border-color: var(--primary-dark);
-  color: #000000;
+  background: var(--teal);
+  border-color: var(--teal-mid);
+  color: #ffffff;
 }
 
 .wizard-step-label {
@@ -117,7 +117,7 @@
 }
 
 .wizard-step.active .wizard-step-label {
-  color: var(--primary);
+  color: var(--saffron-mid);
   font-weight: 600;
 }
 
@@ -147,7 +147,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--primary);
+  background: linear-gradient(90deg, #e8650a 0%, #f5a05a 35%, #1d9e75 65%, #0f6e56 100%);
 }
 
 .page-header h1 {

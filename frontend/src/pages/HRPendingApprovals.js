@@ -108,34 +108,24 @@ const HRPendingApprovals = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>
-        <button 
+      <div className="hr-pending-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'profiles'}
+          className={`hr-pending-tab hr-pending-tab--orange${activeTab === 'profiles' ? ' hr-pending-tab--active' : ''}`}
           onClick={() => setActiveTab('profiles')}
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'profiles' ? 'var(--teal-mid)' : '#f0f0f0',
-            color: activeTab === 'profiles' ? '#fff' : '#333',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
         >
-          Profile Approvals ({activeTab === 'profiles' ? pendingEmployees.length : '...'})
+          Profile approvals ({activeTab === 'profiles' ? pendingEmployees.length : '…'})
         </button>
-        <button 
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'payrolls'}
+          className={`hr-pending-tab hr-pending-tab--green${activeTab === 'payrolls' ? ' hr-pending-tab--active' : ''}`}
           onClick={() => setActiveTab('payrolls')}
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'payrolls' ? 'var(--teal-mid)' : '#f0f0f0',
-            color: activeTab === 'payrolls' ? '#fff' : '#333',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
         >
-          Payroll Approvals ({activeTab === 'payrolls' ? pendingPayrolls.length : '...'})
+          Payroll approvals ({activeTab === 'payrolls' ? pendingPayrolls.length : '…'})
         </button>
       </div>
 
