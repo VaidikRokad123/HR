@@ -1,0 +1,52 @@
+import express from 'express';
+import { body } from 'express-validator';
+import { 
+  getPendingEmployees, 
+  getEmployeeById, 
+  approveEmployee, 
+  rejectEmployee, 
+  editEmployee, 
+  getAllEmployees 
+} from '../controllers/hrController.js';
+import { auth, hrOnly } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
+
+// @route   GET /api/hr/pending-employees
+// @desc    Get all pending employee registrations
+// @access  Private (HR)
+router.get('/pending-employees', auth, hrOnly, getPendingEmployees);
+
+// @route   GET /api/hr/employee/:id
+// @desc    Get full employee details
+// @access  Private (HR)
+router.get('/employee/:id', auth, hrOnly, getEmployeeById);
+
+// @route   PUT /api/hr/employee/:id/approve
+// @desc    Approve employee and assign professional details
+// @access  Private (HR)
+router.put('/employee/:id/approve', [
+  auth,
+  hrOnly,
+  body('dateJoined').isISO8601(),
+  body('department').notEmpty(),
+  body('jobTitle').notEmpty(),
+  body('workEmail').isEmail()
+], approveEmployee);
+
+// @route   PUT /api/hr/employee/:id/reject
+// @desc    Reject employee registration
+// @access  Private (HR)
+router.put('/employee/:id/reject', auth, hrOnly, rejectEmployee);
+
+// @route   PUT /api/hr/employee/:id/edit
+// @desc    Edit employee details (any module)
+// @access  Private (HR)
+router.put('/employee/:id/edit', auth, hrOnly, editEmployee);
+
+// @route   GET /api/hr/all-employees
+// @desc    Get all approved employees
+// @access  Private (HR)
+router.get('/all-employees', auth, hrOnly, getAllEmployees);
+
+export default router;
