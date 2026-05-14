@@ -158,10 +158,10 @@ const HRAllEmployees = () => {
         </div>
       </div>
 
-      <BulkUploadModal 
-        isOpen={isBulkUploadOpen} 
-        onClose={() => setIsBulkUploadOpen(false)} 
-        onUploadSuccess={fetchAllEmployees} 
+      <BulkUploadModal
+        isOpen={isBulkUploadOpen}
+        onClose={() => setIsBulkUploadOpen(false)}
+        onUploadSuccess={fetchAllEmployees}
       />
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -200,7 +200,7 @@ const HRAllEmployees = () => {
                   <td>{employee.professional?.department || 'N/A'}</td>
                   <td>{employee.professional?.jobTitle || 'N/A'}</td>
                   <td>
-                    {employee.professional?.dateJoined 
+                    {employee.professional?.dateJoined
                       ? new Date(employee.professional.dateJoined).toLocaleDateString()
                       : 'N/A'}
                   </td>

@@ -73,7 +73,7 @@ router.put('/complete-profile', [
 router.put('/edit', auth, employeeOnly, async (req, res) => {
   try {
     const { module, data } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     if (!module || !data) {
       return res.status(400).json({ message: 'Module and data are required' });

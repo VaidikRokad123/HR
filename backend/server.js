@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import connectDB from './config/db.js';
+import connectDB from './routes/db.js';
 import authRoutes from './routes/authRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import hrRoutes from './routes/hrRoutes.js';
@@ -55,7 +55,7 @@ app.get('/health', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     success: false,
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined

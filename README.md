@@ -26,6 +26,7 @@ A comprehensive Saeculum Employee Management System with multi-step registration
 - **Profile Completion**: Mandatory bank details and LinkedIn URL after HR approval
 - **Dashboard**: View complete personal, family, address, emergency, professional, and bank details
 - **Status Tracking**: Real-time approval status monitoring
+- **Self-Service Editing**: Employees can edit their own Personal, Family, Address, and Emergency contact details.
 
 ### HR Features
 - **Pending Approvals**: View and manage employee registration requests
@@ -38,7 +39,11 @@ A comprehensive Saeculum Employee Management System with multi-step registration
   - View all approved employees
   - Search and filter employees
   - View detailed employee profiles
-  - Edit any employee module (personal, family, address, emergency, professional, bank)
+- **Bulk Employee Upload**: Create or update multiple employees from an Excel file.
+- **Payroll Management**:
+  - View employees pending payroll setup (within 7 days of joining).
+  - Add CTC and salary structure details for new employees.
+- **Export to Excel**: Download a comprehensive report of all employee data across multiple sheets.
 - **Notification System**: Track employee actions and profile updates
 
 ### Security Features
@@ -83,7 +88,7 @@ A comprehensive Saeculum Employee Management System with multi-step registration
 
 ### Data Flow
 1. **Employee Registration**: Employee → Multi-step Form → Backend → MongoDB → Notification to HR
-2. **HR Approval**: HR → Review → Approve → Generate emp_code → Update all models → Notification to Employee
+2. **HR Approval**: HR → Review → Approve → Generate `emp_code` → Update all models → Notification to Employee
 3. **Profile Completion**: Employee → Bank + LinkedIn → Backend → MongoDB → Notification to HR
 4. **Dashboard Access**: Authenticated User → Protected Route → Fetch Data → Display
 
@@ -165,7 +170,7 @@ npm start
 
 ### Backend (.env)
 ```env
-PORT=5000
+PORT=5001
 MONGODB_URI=mongodb://localhost:27017/hr_portal
 # Or use MongoDB Atlas connection string
 MONGODB_DB_NAME=HR
@@ -196,16 +201,24 @@ Content-Type: application/json
     "fullName": "John Doe",
     "gender": "Male",
     "dob": "1990-01-01",
-    "mobile": "1234567890",
-    "bloodGroup": "O+"
+    "mobile": "1234567890"
   },
   "family": {
     "fatherName": "Father Name",
     "motherName": "Mother Name",
-    "married": false
+    "maritalStatus": "Single",
+    "spouseName": "",
+    "marriageDate": ""
   },
   "address": {
     "currentAddress": {
+      "street": "123 Main St",
+      "city": "City",
+      "state": "State",
+      "pincode": "123456",
+      "country": "India"
+    },
+    "permanentAddress": {
       "street": "123 Main St",
       "city": "City",
       "state": "State",

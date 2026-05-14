@@ -7,8 +7,6 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   const [activeTab, setActiveTab] = useState('upload');
   const [file, setFile] = useState(null);
   const [parsedData, setParsedData] = useState([]);
-  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
-  const [acceptedEmployees, setAcceptedEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
@@ -17,8 +15,6 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     if (!isOpen) {
       setFile(null);
       setParsedData([]);
-      setCurrentReviewIndex(0);
-      setAcceptedEmployees([]);
       setError('');
       setActiveTab('upload');
       setLoading(false);
@@ -31,8 +27,6 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setParsedData([]);
-      setCurrentReviewIndex(0);
-      setAcceptedEmployees([]);
       setError('');
       setActiveTab('upload');
     }
@@ -298,8 +292,6 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           setError('No employee rows found. Check sheet names and columns.');
           setActiveTab('upload');
         } else {
-          setCurrentReviewIndex(0);
-          setAcceptedEmployees([]);
           setActiveTab('review');
         }
       } catch (err) {
@@ -316,6 +308,12 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     setParsedData(newData);
   };
 
+  const handleNestedFieldChange = (index, category, subcategory, field, value) => {
+    const newData = [...parsedData];
+    newData[index][category][subcategory][field] = value;
+    setParsedData(newData);
+  };
+
   const handleEmailChange = (index, value) => {
     const newData = [...parsedData];
     newData[index].user.email = value;
@@ -323,15 +321,31 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     setParsedData(newData);
   };
 
+  const handleRemoveEmployee = (index) => {
+    const newData = [...parsedData];
+    newData.splice(index, 1);
+    setParsedData(newData);
+    if (newData.length === 0) {
+      setActiveTab('upload');
+    }
+  };
+
   const handleSubmit = async () => {
-    if (acceptedEmployees.length === 0) {
-      alert("No employees selected for upload.");
-      onClose();
+    const validEmployees = parsedData.filter(emp => emp.user.email && emp.user.email.trim() !== '');
+    
+    if (validEmployees.length === 0) {
+      alert("No employees with a valid email found for upload.");
       return;
+    }
+    
+    if (validEmployees.length < parsedData.length) {
+      if (!window.confirm(`Found ${parsedData.length - validEmployees.length} employee(s) without an email. They will be skipped. Continue?`)) {
+        return;
+      }
     }
     try {
       setLoading(true);
-      const response = await axios.post('/hr/bulk-upload', { employees: acceptedEmployees });
+      const response = await axios.post('/hr/bulk-upload', { employees: validEmployees });
 
       if (response.data.errorCount > 0) {
         alert(`Upload finished, but ${response.data.errorCount} row(s) failed to save.\n\nThis usually happens when an employee is missing required Database fields (like Full Name, Gender, DOB, Mobile, or Blood Group). Check the Node console for exact details.`);
@@ -466,132 +480,176 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             </div>
           )}
 
-          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex < parsedData.length && (() => {
-            const emp = parsedData[currentReviewIndex];
-            return (
-            <div className="bulk-review-panel">
-              <div className="bulk-review-banner">
-                <i className="ti ti-user" aria-hidden="true" />
+          {activeTab === 'review' && parsedData.length > 0 && (
+            <div className="bulk-review-panel" style={{ display: 'flex', flexDirection: 'column', height: '65vh' }}>
+              <div className="bulk-review-banner" style={{ marginBottom: '10px' }}>
+                <i className="ti ti-table" aria-hidden="true" />
                 <div>
                   <p className="bulk-review-count">
-                    Reviewing Employee <span className="bulk-count-n">{currentReviewIndex + 1}</span> of {parsedData.length}
+                    Reviewing <span className="bulk-count-n">{parsedData.length}</span> Employees
                   </p>
-                  <p className="bulk-review-sub">Review details. Accept to include, or Reject to skip.</p>
+                  <p className="bulk-review-sub">Edit details directly in the table. Employees without an email will be skipped.</p>
                 </div>
               </div>
 
-              <div className="employee-review-details" style={{ maxHeight: '50vh', overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div className="card" style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
-                  <h4 style={{ color: 'var(--saffron, orange)', borderBottom: '2px solid var(--saffron, orange)', paddingBottom: '5px', marginBottom: '15px' }}>Personal Details</h4>
-                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Email <span className="req">*</span></label>
-                      <input type="email" value={emp.user.email} onChange={(e) => handleEmailChange(currentReviewIndex, e.target.value)} className={`bulk-cell-input${!emp.user.email ? ' input-error' : ''}`} style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Emp Code</label>
-                      <input type="text" value={emp.emp_code || ''} onChange={(e) => { const newData = [...parsedData]; newData[currentReviewIndex].emp_code = e.target.value; setParsedData(newData); }} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Full Name</label>
-                      <input type="text" value={emp.personal.fullName} onChange={(e) => handleFieldChange(currentReviewIndex, 'personal', 'fullName', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Mobile</label>
-                      <input type="text" value={emp.personal.mobile} onChange={(e) => handleFieldChange(currentReviewIndex, 'personal', 'mobile', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                  </div>
-                </div>
+              <div className="bulk-table-container">
+                <table className="bulk-review-table">
+                  <thead>
+                     <tr>
+                        <th colSpan="8" className="bg-personal">Personal</th>
+                        <th colSpan="8" className="bg-professional">Professional</th>
+                        <th colSpan="5" className="bg-family">Family</th>
+                        <th colSpan="10" className="bg-address">Address</th>
+                        <th colSpan="9" className="bg-bank">Bank</th>
+                        <th colSpan="6" className="bg-emergency">Emergency</th>
+                        <th className="bg-actions">Actions</th>
+                     </tr>
+                     <tr>
+                        {/* Personal */}
+                        <th className="sticky-col" style={{ left: 0 }}>Email <span className="req">*</span></th>
+                        <th className="sticky-col" style={{ left: '150px' }}>Emp Code</th>
+                        <th>Full Name</th>
+                        <th>Gender</th>
+                        <th>DOB</th>
+                        <th>Mobile</th>
+                        <th>Personal Email</th>
+                        <th>Blood Group</th>
+                        
+                        {/* Professional */}
+                        <th>Department</th>
+                        <th>Job Title</th>
+                        <th>Date Joined</th>
+                        <th>Reporting Manager</th>
+                        <th>Work Email</th>
+                        <th>Biometric ID</th>
+                        <th>LinkedIn</th>
+                        <th>In Probation</th>
 
-                <div className="card" style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
-                  <h4 style={{ color: 'var(--green, green)', borderBottom: '2px solid var(--green, green)', paddingBottom: '5px', marginBottom: '15px' }}>Professional Details</h4>
-                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Department</label>
-                      <input type="text" value={emp.professional.department} onChange={(e) => handleFieldChange(currentReviewIndex, 'professional', 'department', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Job Title</label>
-                      <input type="text" value={emp.professional.jobTitle} onChange={(e) => handleFieldChange(currentReviewIndex, 'professional', 'jobTitle', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Date Joined</label>
-                      <input type="date" value={emp.professional.dateJoined} onChange={(e) => handleFieldChange(currentReviewIndex, 'professional', 'dateJoined', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                  </div>
-                </div>
+                        {/* Family */}
+                        <th>Father Name</th>
+                        <th>Mother Name</th>
+                        <th>Marital Status</th>
+                        <th>Spouse Name</th>
+                        <th>Marriage Date</th>
 
-                <div className="card" style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
-                  <h4 style={{ color: 'var(--saffron, orange)', borderBottom: '2px solid var(--saffron, orange)', paddingBottom: '5px', marginBottom: '15px' }}>Bank Details</h4>
-                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Bank Name</label>
-                      <input type="text" value={emp.bank.bankName} onChange={(e) => handleFieldChange(currentReviewIndex, 'bank', 'bankName', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Personal Account No</label>
-                      <input type="text" value={emp.bank.personalAccountNumber} onChange={(e) => handleFieldChange(currentReviewIndex, 'bank', 'personalAccountNumber', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>IFSC</label>
-                      <input type="text" value={emp.bank.personalIfsc} onChange={(e) => handleFieldChange(currentReviewIndex, 'bank', 'personalIfsc', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            );
-          })()}
+                        {/* Address */}
+                        <th>Curr Street</th>
+                        <th>Curr City</th>
+                        <th>Curr State</th>
+                        <th>Curr Pincode</th>
+                        <th>Curr Country</th>
+                        <th>Perm Street</th>
+                        <th>Perm City</th>
+                        <th>Perm State</th>
+                        <th>Perm Pincode</th>
+                        <th>Perm Country</th>
 
-          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex >= parsedData.length && (
-            <div className="bulk-review-panel">
-               <div className="bulk-review-banner">
-                <i className="ti ti-check" aria-hidden="true" />
-                <div>
-                  <p className="bulk-review-count">
-                    Review Complete
-                  </p>
-                  <p className="bulk-review-sub">You have accepted {acceptedEmployees.length} employees out of {parsedData.length}.</p>
-                </div>
+                        {/* Bank */}
+                        <th>Co. Opens Bank</th>
+                        <th>PAN</th>
+                        <th>Aadhar</th>
+                        <th>Bank Name</th>
+                        <th>Branch</th>
+                        <th>Personal Acc</th>
+                        <th>Personal IFSC</th>
+                        <th>Salary Acc</th>
+                        <th>Salary IFSC</th>
+
+                        {/* Emergency */}
+                        <th>E1 Name</th>
+                        <th>E1 Relation</th>
+                        <th>E1 Mobile</th>
+                        <th>E2 Name</th>
+                        <th>E2 Relation</th>
+                        <th>E2 Mobile</th>
+                        
+                        <th>Remove</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     {parsedData.map((emp, index) => (
+                       <tr key={index}>
+                         {/* Personal */}
+                         <td className="sticky-col" style={{ left: 0 }}><input type="email" value={emp.user.email} onChange={(e) => handleEmailChange(index, e.target.value)} className={`bulk-cell-input-small ${!emp.user.email ? 'input-error' : ''}`} style={{ width: '140px' }} /></td>
+                         <td className="sticky-col" style={{ left: '150px' }}><input type="text" value={emp.emp_code} onChange={(e) => { const newData = [...parsedData]; newData[index].emp_code = e.target.value; setParsedData(newData); }} className="bulk-cell-input-small" style={{ width: '90px' }} /></td>
+                         <td><input type="text" value={emp.personal.fullName} onChange={(e) => handleFieldChange(index, 'personal', 'fullName', e.target.value)} className="bulk-cell-input-small" style={{ width: '120px' }} /></td>
+                         <td><select value={emp.personal.gender} onChange={(e) => handleFieldChange(index, 'personal', 'gender', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }}><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></td>
+                         <td><input type="date" value={emp.personal.dob} onChange={(e) => handleFieldChange(index, 'personal', 'dob', e.target.value)} className="bulk-cell-input-small" style={{ width: '110px' }} /></td>
+                         <td><input type="text" value={emp.personal.mobile} onChange={(e) => handleFieldChange(index, 'personal', 'mobile', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="email" value={emp.personal.personalEmail} onChange={(e) => handleFieldChange(index, 'personal', 'personalEmail', e.target.value)} className="bulk-cell-input-small" style={{ width: '140px' }} /></td>
+                         <td><input type="text" value={emp.personal.bloodGroup} onChange={(e) => handleFieldChange(index, 'personal', 'bloodGroup', e.target.value)} className="bulk-cell-input-small" style={{ width: '60px' }} /></td>
+
+                         {/* Professional */}
+                         <td><input type="text" value={emp.professional.department} onChange={(e) => handleFieldChange(index, 'professional', 'department', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.professional.jobTitle} onChange={(e) => handleFieldChange(index, 'professional', 'jobTitle', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="date" value={emp.professional.dateJoined} onChange={(e) => handleFieldChange(index, 'professional', 'dateJoined', e.target.value)} className="bulk-cell-input-small" style={{ width: '110px' }} /></td>
+                         <td><input type="text" value={emp.professional.reportingManager} onChange={(e) => handleFieldChange(index, 'professional', 'reportingManager', e.target.value)} className="bulk-cell-input-small" style={{ width: '120px' }} /></td>
+                         <td><input type="email" value={emp.professional.workEmail} onChange={(e) => handleFieldChange(index, 'professional', 'workEmail', e.target.value)} className="bulk-cell-input-small" style={{ width: '140px' }} /></td>
+                         <td><input type="text" value={emp.professional.attendanceBiometricId} onChange={(e) => handleFieldChange(index, 'professional', 'attendanceBiometricId', e.target.value)} className="bulk-cell-input-small" style={{ width: '90px' }} /></td>
+                         <td><input type="text" value={emp.professional.linkedinUrl} onChange={(e) => handleFieldChange(index, 'professional', 'linkedinUrl', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td style={{ textAlign: 'center' }}><input type="checkbox" checked={emp.professional.inProbation} onChange={(e) => handleFieldChange(index, 'professional', 'inProbation', e.target.checked)} /></td>
+
+                         {/* Family */}
+                         <td><input type="text" value={emp.family.fatherName} onChange={(e) => handleFieldChange(index, 'family', 'fatherName', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.family.motherName} onChange={(e) => handleFieldChange(index, 'family', 'motherName', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><select value={emp.family.maritalStatus} onChange={(e) => handleFieldChange(index, 'family', 'maritalStatus', e.target.value)} className="bulk-cell-input-small" style={{ width: '90px' }}><option value="Single">Single</option><option value="Married">Married</option><option value="Divorced">Divorced</option><option value="Widowed">Widowed</option></select></td>
+                         <td><input type="text" value={emp.family.spouseName} onChange={(e) => handleFieldChange(index, 'family', 'spouseName', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="date" value={emp.family.marriageDate} onChange={(e) => handleFieldChange(index, 'family', 'marriageDate', e.target.value)} className="bulk-cell-input-small" style={{ width: '110px' }} /></td>
+
+                         {/* Address */}
+                         <td><input type="text" value={emp.address.currentAddress.street} onChange={(e) => handleNestedFieldChange(index, 'address', 'currentAddress', 'street', e.target.value)} className="bulk-cell-input-small" style={{ width: '120px' }} /></td>
+                         <td><input type="text" value={emp.address.currentAddress.city} onChange={(e) => handleNestedFieldChange(index, 'address', 'currentAddress', 'city', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }} /></td>
+                         <td><input type="text" value={emp.address.currentAddress.state} onChange={(e) => handleNestedFieldChange(index, 'address', 'currentAddress', 'state', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }} /></td>
+                         <td><input type="text" value={emp.address.currentAddress.pincode} onChange={(e) => handleNestedFieldChange(index, 'address', 'currentAddress', 'pincode', e.target.value)} className="bulk-cell-input-small" style={{ width: '70px' }} /></td>
+                         <td><input type="text" value={emp.address.currentAddress.country} onChange={(e) => handleNestedFieldChange(index, 'address', 'currentAddress', 'country', e.target.value)} className="bulk-cell-input-small" style={{ width: '70px' }} /></td>
+                         <td><input type="text" value={emp.address.permanentAddress.street} onChange={(e) => handleNestedFieldChange(index, 'address', 'permanentAddress', 'street', e.target.value)} className="bulk-cell-input-small" style={{ width: '120px' }} /></td>
+                         <td><input type="text" value={emp.address.permanentAddress.city} onChange={(e) => handleNestedFieldChange(index, 'address', 'permanentAddress', 'city', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }} /></td>
+                         <td><input type="text" value={emp.address.permanentAddress.state} onChange={(e) => handleNestedFieldChange(index, 'address', 'permanentAddress', 'state', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }} /></td>
+                         <td><input type="text" value={emp.address.permanentAddress.pincode} onChange={(e) => handleNestedFieldChange(index, 'address', 'permanentAddress', 'pincode', e.target.value)} className="bulk-cell-input-small" style={{ width: '70px' }} /></td>
+                         <td><input type="text" value={emp.address.permanentAddress.country} onChange={(e) => handleNestedFieldChange(index, 'address', 'permanentAddress', 'country', e.target.value)} className="bulk-cell-input-small" style={{ width: '70px' }} /></td>
+
+                         {/* Bank */}
+                         <td style={{ textAlign: 'center' }}><input type="checkbox" checked={emp.bank.companyOpensBank} onChange={(e) => handleFieldChange(index, 'bank', 'companyOpensBank', e.target.checked)} /></td>
+                         <td><input type="text" value={emp.bank.panNumber} onChange={(e) => handleFieldChange(index, 'bank', 'panNumber', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.bank.aadharNumber} onChange={(e) => handleFieldChange(index, 'bank', 'aadharNumber', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.bank.bankName} onChange={(e) => handleFieldChange(index, 'bank', 'bankName', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.bank.branch} onChange={(e) => handleFieldChange(index, 'bank', 'branch', e.target.value)} className="bulk-cell-input-small" style={{ width: '90px' }} /></td>
+                         <td><input type="text" value={emp.bank.personalAccountNumber} onChange={(e) => handleFieldChange(index, 'bank', 'personalAccountNumber', e.target.value)} className="bulk-cell-input-small" style={{ width: '110px' }} /></td>
+                         <td><input type="text" value={emp.bank.personalIfsc} onChange={(e) => handleFieldChange(index, 'bank', 'personalIfsc', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.bank.salaryAccountNumber} onChange={(e) => handleFieldChange(index, 'bank', 'salaryAccountNumber', e.target.value)} className="bulk-cell-input-small" style={{ width: '110px' }} /></td>
+                         <td><input type="text" value={emp.bank.salaryIfsc} onChange={(e) => handleFieldChange(index, 'bank', 'salaryIfsc', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+
+                         {/* Emergency */}
+                         <td><input type="text" value={emp.emergency.emergencyContact1.name} onChange={(e) => handleNestedFieldChange(index, 'emergency', 'emergencyContact1', 'name', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.emergency.emergencyContact1.relationship} onChange={(e) => handleNestedFieldChange(index, 'emergency', 'emergencyContact1', 'relationship', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }} /></td>
+                         <td><input type="text" value={emp.emergency.emergencyContact1.mobile} onChange={(e) => handleNestedFieldChange(index, 'emergency', 'emergencyContact1', 'mobile', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.emergency.emergencyContact2.name} onChange={(e) => handleNestedFieldChange(index, 'emergency', 'emergencyContact2', 'name', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+                         <td><input type="text" value={emp.emergency.emergencyContact2.relationship} onChange={(e) => handleNestedFieldChange(index, 'emergency', 'emergencyContact2', 'relationship', e.target.value)} className="bulk-cell-input-small" style={{ width: '80px' }} /></td>
+                         <td><input type="text" value={emp.emergency.emergencyContact2.mobile} onChange={(e) => handleNestedFieldChange(index, 'emergency', 'emergencyContact2', 'mobile', e.target.value)} className="bulk-cell-input-small" style={{ width: '100px' }} /></td>
+
+                         <td style={{ textAlign: 'center' }}>
+                           <button type="button" onClick={() => handleRemoveEmployee(index)} className="remove-btn-cell">
+                             <i className="ti ti-trash"></i>
+                           </button>
+                         </td>
+                       </tr>
+                     ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
+
         </div>
 
         <div className="modal-footer bulk-modal-footer">
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex < parsedData.length && (
-            <>
-              <button type="button" className="btn btn-danger" onClick={() => setCurrentReviewIndex(currentReviewIndex + 1)}>
-                Reject & Skip
-              </button>
-              <button type="button" className="btn btn-success" onClick={() => {
-                const emp = parsedData[currentReviewIndex];
-                if (!emp.user.email) {
-                  alert("Email is mandatory to accept this employee.");
-                  return;
-                }
-                setAcceptedEmployees([...acceptedEmployees, emp]);
-                setCurrentReviewIndex(currentReviewIndex + 1);
-              }}>
-                Accept & Next
-              </button>
-            </>
-          )}
-          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex >= parsedData.length && (
-            <>
-              <button type="button" className="btn btn-secondary" onClick={() => {
-                setCurrentReviewIndex(0);
-                setAcceptedEmployees([]);
-              }}>
-                Review Again
-              </button>
-              <button type="button" className="btn btn-success" onClick={handleSubmit} disabled={loading || acceptedEmployees.length === 0}>
-                {loading ? 'Uploading…' : `Confirm & Upload ${acceptedEmployees.length} Employees`}
-              </button>
-            </>
+          {activeTab === 'review' && parsedData.length > 0 && (
+            <button type="button" className="btn btn-success" onClick={handleSubmit} disabled={loading || parsedData.length === 0}>
+              {loading ? 'Uploading…' : `Confirm & Upload All`}
+            </button>
           )}
         </div>
       </div>

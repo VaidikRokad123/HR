@@ -17,14 +17,14 @@ import { generateEmpCode } from '../utils/empCodeUtils.js';
 export const getPendingEmployees = async (req, res) => {
   try {
     const pendingUsers = await UserModel.find({ status: 'pending_hr' }).select('-passwordHash');
-    
+
     const pendingEmployees = await Promise.all(
       pendingUsers.map(async (user) => {
         const personal = await EmployeePersonalModel.findOne({ userId: user._id });
         const family = await EmployeeFamilyModel.findOne({ userId: user._id });
         const address = await EmployeeAddressModel.findOne({ userId: user._id });
         const emergency = await EmployeeEmergencyModel.findOne({ userId: user._id });
-        
+
         return {
           user: {
             id: user._id,
@@ -54,7 +54,7 @@ export const getPendingEmployees = async (req, res) => {
 export const getEmployeeById = async (req, res) => {
   try {
     const user = await UserModel.findById(req.params.id).select('-passwordHash');
-    
+
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -63,7 +63,7 @@ export const getEmployeeById = async (req, res) => {
     const family = await EmployeeFamilyModel.findOne({ userId: user._id });
     const address = await EmployeeAddressModel.findOne({ userId: user._id });
     const emergency = await EmployeeEmergencyModel.findOne({ userId: user._id });
-    
+
     let professional = null;
     let bank = null;
 
@@ -106,7 +106,7 @@ export const approveEmployee = async (req, res) => {
     }
 
     const user = await UserModel.findById(req.params.id);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -189,7 +189,7 @@ export const approveEmployee = async (req, res) => {
 export const rejectEmployee = async (req, res) => {
   try {
     const user = await UserModel.findById(req.params.id);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -203,7 +203,7 @@ export const rejectEmployee = async (req, res) => {
     await EmployeeFamilyModel.deleteOne({ userId: user._id });
     await EmployeeAddressModel.deleteOne({ userId: user._id });
     await EmployeeEmergencyModel.deleteOne({ userId: user._id });
-    
+
     // Delete user
     await UserModel.deleteOne({ _id: user._id });
 
@@ -221,13 +221,13 @@ export const rejectEmployee = async (req, res) => {
 export const editEmployee = async (req, res) => {
   try {
     const { module, data } = req.body;
-    
+
     if (!module || !data) {
       return res.status(400).json({ message: 'Module and data are required' });
     }
 
     const user = await UserModel.findById(req.params.id);
-    
+
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -270,6 +270,14 @@ export const editEmployee = async (req, res) => {
       case 'professional':
         if (!user.emp_code) {
           return res.status(400).json({ message: 'Employee not approved yet' });
+        }
+
+        // Validate probation duration if present
+        if (data.probationDuration) {
+          const duration = parseInt(data.probationDuration, 10);
+          if (isNaN(duration) || duration < 0 || duration > 12) {
+            return res.status(400).json({ message: 'Probation duration must be a number between 0 and 12 months.' });
+          }
         }
 
         // Reset notification flag if HR updates probation duration
@@ -316,7 +324,7 @@ export const editEmployee = async (req, res) => {
 export const getAllEmployees = async (req, res) => {
   try {
     const approvedUsers = await UserModel.find({ status: 'approved' }).select('-passwordHash');
-    
+
     const employees = await Promise.all(
       approvedUsers.map(async (user) => {
         const personal = await EmployeePersonalModel.findOne({ emp_code: user.emp_code });
@@ -325,22 +333,22 @@ export const getAllEmployees = async (req, res) => {
         const address = await EmployeeAddressModel.findOne({ emp_code: user.emp_code });
         const emergency = await EmployeeEmergencyModel.findOne({ emp_code: user.emp_code });
         const bank = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
-        
+
         // Check if probation has ended and notify HR
         if (professional && professional.inProbation && professional.probationDuration && professional.dateJoined) {
           const months = parseInt(professional.probationDuration, 10);
-          
+
           if (!isNaN(months) && !professional.probationEndedNotified) {
             const probationEndDate = new Date(professional.dateJoined);
             probationEndDate.setMonth(probationEndDate.getMonth() + months);
-            
+
             if (new Date() >= probationEndDate) {
               const notification = new NotificationModel({
                 toRole: 'hr',
                 message: `Probation period has ended for ${personal?.fullName || user.email} (${user.emp_code}). Please review their status.`
               });
               await notification.save();
-              
+
               professional.probationEndedNotified = true;
               await professional.save();
             }
@@ -395,7 +403,7 @@ export const getPendingPayrolls = async (req, res) => {
         // Find user and personal info for display
         const user = await UserModel.findById(prof.userId).select('email status createdAt');
         const personal = await EmployeePersonalModel.findOne({ userId: prof.userId }).select('fullName mobile');
-        
+
         pendingPayrolls.push({
           user: {
             id: prof.userId,
@@ -486,7 +494,7 @@ export const bulkUploadEmployees = async (req, res) => {
     for (const [index, empData] of employees.entries()) {
       try {
         let { user: userData, personal, professional, family, address, bank, emergency } = empData;
-        
+
         let email = userData?.email || personal?.personalEmail || `temp${Date.now()}@example.com`;
         email = email.toLowerCase().trim();
         const empCodeFromSheet = empData.emp_code;
@@ -500,6 +508,17 @@ export const bulkUploadEmployees = async (req, res) => {
         let isUpdate = false;
         if (user) {
           isUpdate = true;
+          // Ensure existing user is approved and has an employee code
+          let userNeedsUpdate = false;
+          if (user.status !== 'approved') {
+            user.status = 'approved';
+            userNeedsUpdate = true;
+          }
+          if (!user.emp_code) {
+            user.emp_code = empCodeFromSheet || await generateEmpCode();
+            userNeedsUpdate = true;
+          }
+          if (userNeedsUpdate) await user.save();
         } else {
           const emp_code = empCodeFromSheet || await generateEmpCode();
 
@@ -540,7 +559,7 @@ export const bulkUploadEmployees = async (req, res) => {
           if (isUpdate) await EmployeeBankModel.findOneAndUpdate({ emp_code: current_emp_code }, { userId: user._id, ...bank }, { upsert: true });
           else await new EmployeeBankModel({ userId: user._id, emp_code: current_emp_code, ...bank }).save();
         }
-        
+
         if (emergency) {
           if (isUpdate) await EmployeeEmergencyModel.findOneAndUpdate({ userId: user._id }, { emp_code: current_emp_code, ...emergency }, { upsert: true });
           else await new EmployeeEmergencyModel({ userId: user._id, emp_code: current_emp_code, ...emergency }).save();

@@ -1,11 +1,11 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { 
-  getPendingEmployees, 
-  getEmployeeById, 
-  approveEmployee, 
-  rejectEmployee, 
-  editEmployee, 
+import {
+  getPendingEmployees,
+  getEmployeeById,
+  approveEmployee,
+  rejectEmployee,
+  editEmployee,
   getAllEmployees,
   getPendingPayrolls,
   addPayrollDetails,
@@ -50,7 +50,11 @@ router.put('/employee/:id/approve', [
   body('department').notEmpty(),
   body('jobTitle').notEmpty(),
   body('employmentType').notEmpty(),
-  body('workEmail').isEmail()
+  body('workEmail').isEmail(),
+  body('probationDuration')
+    .optional({ checkFalsy: true })
+    .isNumeric().withMessage('Probation duration must be a number.')
+    .isInt({ min: 0, max: 12 }).withMessage('Probation duration must be between 0 and 12 months.')
 ], approveEmployee);
 
 // @route   PUT /api/hr/employee/:id/reject
