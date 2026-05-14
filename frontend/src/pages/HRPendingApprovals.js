@@ -108,24 +108,34 @@ const HRPendingApprovals = () => {
         </div>
       </div>
 
-      <div className="hr-pending-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'profiles'}
-          className={`hr-pending-tab hr-pending-tab--orange${activeTab === 'profiles' ? ' hr-pending-tab--active' : ''}`}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>
+        <button 
           onClick={() => setActiveTab('profiles')}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: activeTab === 'profiles' ? 'var(--teal-mid)' : '#f0f0f0',
+            color: activeTab === 'profiles' ? '#fff' : '#333',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
         >
-          Profile approvals ({activeTab === 'profiles' ? pendingEmployees.length : '…'})
+          Profile Approvals ({activeTab === 'profiles' ? pendingEmployees.length : '...'})
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'payrolls'}
-          className={`hr-pending-tab hr-pending-tab--green${activeTab === 'payrolls' ? ' hr-pending-tab--active' : ''}`}
+        <button 
           onClick={() => setActiveTab('payrolls')}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: activeTab === 'payrolls' ? 'var(--teal-mid)' : '#f0f0f0',
+            color: activeTab === 'payrolls' ? '#fff' : '#333',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
         >
-          Payroll approvals ({activeTab === 'payrolls' ? pendingPayrolls.length : '…'})
+          Payroll Approvals ({activeTab === 'payrolls' ? pendingPayrolls.length : '...'})
         </button>
       </div>
 
@@ -145,25 +155,23 @@ const HRPendingApprovals = () => {
           pendingEmployees.map((employee) => (
             <div 
               key={employee.user.id} 
-              className="employee-card"
+              className="card employee-card"
               onClick={() => navigate(`/hr/employee/${employee.user.id}`)}
-              style={{ cursor: 'pointer', marginBottom: '15px' }}
+              style={{ cursor: 'pointer', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}
             >
-              <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
-                  <h3>{employee.personal?.fullName || 'N/A'}</h3>
-                  <p style={{ color: '#666', marginTop: '8px' }}>
-                    <strong>Email:</strong> {employee.user.email}
-                  </p>
-                  <p style={{ color: '#666' }}>
-                    <strong>Mobile:</strong> {employee.personal?.mobile || 'N/A'}
-                  </p>
-                  <p style={{ color: '#666' }}>
-                    <strong>Submitted:</strong> {new Date(employee.user.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <span className="badge badge-pending" style={{ background: 'var(--warn)', color: '#fff', padding: '5px 10px', borderRadius: '4px' }}>Pending Profile</span>
+              <div>
+                <h3>{employee.personal?.fullName || 'N/A'}</h3>
+                <p style={{ color: '#666', marginTop: '8px' }}>
+                  <strong>Email:</strong> {employee.user.email}
+                </p>
+                <p style={{ color: '#666' }}>
+                  <strong>Mobile:</strong> {employee.personal?.mobile || 'N/A'}
+                </p>
+                <p style={{ color: '#666' }}>
+                  <strong>Submitted:</strong> {new Date(employee.user.createdAt).toLocaleDateString()}
+                </p>
               </div>
+              <span className="badge badge-pending" style={{ background: 'var(--saffron)', color: '#fff', padding: '5px 10px', borderRadius: '4px' }}>Pending Profile</span>
             </div>
           ))
         )
@@ -179,35 +187,33 @@ const HRPendingApprovals = () => {
           pendingPayrolls.map((emp) => (
             <div 
               key={emp.user.id} 
-              className="employee-card"
-              style={{ marginBottom: '15px' }}
+              className="card employee-card"
+              style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
-              <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3>{emp.personal?.fullName || 'N/A'} - {emp.user.emp_code}</h3>
-                  <p style={{ color: '#666', marginTop: '8px' }}>
-                    <strong>Email:</strong> {emp.user.email}
-                  </p>
-                  <p style={{ color: '#666' }}>
-                    <strong>Joined:</strong> {new Date(emp.user.dateJoined).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <button 
-                    onClick={() => handleOpenPayrollModal(emp)}
-                    style={{
-                      background: 'var(--saffron-mid)',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    Add Payroll
-                  </button>
-                </div>
+              <div>
+                <h3>{emp.personal?.fullName || 'N/A'} - {emp.user.emp_code}</h3>
+                <p style={{ color: '#666', marginTop: '8px' }}>
+                  <strong>Email:</strong> {emp.user.email}
+                </p>
+                <p style={{ color: '#666' }}>
+                  <strong>Joined:</strong> {new Date(emp.user.dateJoined).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <button 
+                  onClick={() => handleOpenPayrollModal(emp)}
+                  style={{
+                    background: 'var(--saffron-mid)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Add Payroll
+                </button>
               </div>
             </div>
           ))

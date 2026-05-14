@@ -7,6 +7,8 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   const [activeTab, setActiveTab] = useState('upload');
   const [file, setFile] = useState(null);
   const [parsedData, setParsedData] = useState([]);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [acceptedEmployees, setAcceptedEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
@@ -15,6 +17,8 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     if (!isOpen) {
       setFile(null);
       setParsedData([]);
+      setCurrentReviewIndex(0);
+      setAcceptedEmployees([]);
       setError('');
       setActiveTab('upload');
       setLoading(false);
@@ -27,6 +31,8 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setParsedData([]);
+      setCurrentReviewIndex(0);
+      setAcceptedEmployees([]);
       setError('');
       setActiveTab('upload');
     }
@@ -292,6 +298,8 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           setError('No employee rows found. Check sheet names and columns.');
           setActiveTab('upload');
         } else {
+          setCurrentReviewIndex(0);
+          setAcceptedEmployees([]);
           setActiveTab('review');
         }
       } catch (err) {
@@ -316,11 +324,20 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   };
 
   const handleSubmit = async () => {
+    if (acceptedEmployees.length === 0) {
+      alert("No employees selected for upload.");
+      onClose();
+      return;
+    }
     try {
       setLoading(true);
-      await axios.post('/hr/bulk-upload', { employees: parsedData });
+      const response = await axios.post('/hr/bulk-upload', { employees: acceptedEmployees });
 
-      alert('Bulk upload completed successfully!');
+      if (response.data.errorCount > 0) {
+        alert(`Upload finished, but ${response.data.errorCount} row(s) failed to save.\n\nThis usually happens when an employee is missing required Database fields (like Full Name, Gender, DOB, Mobile, or Blood Group). Check the Node console for exact details.`);
+      } else {
+        alert('Bulk upload completed successfully!');
+      }
       onUploadSuccess();
       onClose();
     } catch (err) {
@@ -449,90 +466,93 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             </div>
           )}
 
-          {activeTab === 'review' && parsedData.length > 0 && (
+          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex < parsedData.length && (() => {
+            const emp = parsedData[currentReviewIndex];
+            return (
             <div className="bulk-review-panel">
               <div className="bulk-review-banner">
-                <i className="ti ti-users-group" aria-hidden="true" />
+                <i className="ti ti-user" aria-hidden="true" />
                 <div>
                   <p className="bulk-review-count">
-                    <span className="bulk-count-n">{parsedData.length}</span> row
-                    {parsedData.length !== 1 ? 's' : ''} ready
+                    Reviewing Employee <span className="bulk-count-n">{currentReviewIndex + 1}</span> of {parsedData.length}
                   </p>
-                  <p className="bulk-review-sub">Edit required fields before confirming. Email is mandatory per row.</p>
+                  <p className="bulk-review-sub">Review details. Accept to include, or Reject to skip.</p>
                 </div>
               </div>
 
-              <div className="table-responsive bulk-table-wrap">
-                <table className="table bulk-preview-table">
-                  <thead>
-                    <tr>
-                      <th>
-                        <span className="th-accent th-orange">Email</span> <span className="req">*</span>
-                      </th>
-                      <th>
-                        <span className="th-accent th-orange">Full name</span>
-                      </th>
-                      <th>Mobile</th>
-                      <th>
-                        <span className="th-accent th-green">Department</span>
-                      </th>
-                      <th>
-                        <span className="th-accent th-green">Job title</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedData.map((emp, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          <input
-                            type="email"
-                            value={emp.user.email}
-                            onChange={(e) => handleEmailChange(idx, e.target.value)}
-                            placeholder="work@company.com"
-                            className={`bulk-cell-input${!emp.user.email ? ' input-error' : ''}`}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={emp.personal.fullName}
-                            onChange={(e) => handleFieldChange(idx, 'personal', 'fullName', e.target.value)}
-                            placeholder="Full name"
-                            className="bulk-cell-input"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={emp.personal.mobile}
-                            onChange={(e) => handleFieldChange(idx, 'personal', 'mobile', e.target.value)}
-                            placeholder="Mobile"
-                            className="bulk-cell-input"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={emp.professional.department}
-                            onChange={(e) => handleFieldChange(idx, 'professional', 'department', e.target.value)}
-                            placeholder="Department"
-                            className="bulk-cell-input"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={emp.professional.jobTitle}
-                            onChange={(e) => handleFieldChange(idx, 'professional', 'jobTitle', e.target.value)}
-                            placeholder="Job title"
-                            className="bulk-cell-input"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="employee-review-details" style={{ maxHeight: '50vh', overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div className="card" style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
+                  <h4 style={{ color: 'var(--saffron, orange)', borderBottom: '2px solid var(--saffron, orange)', paddingBottom: '5px', marginBottom: '15px' }}>Personal Details</h4>
+                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Email <span className="req">*</span></label>
+                      <input type="email" value={emp.user.email} onChange={(e) => handleEmailChange(currentReviewIndex, e.target.value)} className={`bulk-cell-input${!emp.user.email ? ' input-error' : ''}`} style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Emp Code</label>
+                      <input type="text" value={emp.emp_code || ''} onChange={(e) => { const newData = [...parsedData]; newData[currentReviewIndex].emp_code = e.target.value; setParsedData(newData); }} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Full Name</label>
+                      <input type="text" value={emp.personal.fullName} onChange={(e) => handleFieldChange(currentReviewIndex, 'personal', 'fullName', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Mobile</label>
+                      <input type="text" value={emp.personal.mobile} onChange={(e) => handleFieldChange(currentReviewIndex, 'personal', 'mobile', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card" style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
+                  <h4 style={{ color: 'var(--green, green)', borderBottom: '2px solid var(--green, green)', paddingBottom: '5px', marginBottom: '15px' }}>Professional Details</h4>
+                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Department</label>
+                      <input type="text" value={emp.professional.department} onChange={(e) => handleFieldChange(currentReviewIndex, 'professional', 'department', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Job Title</label>
+                      <input type="text" value={emp.professional.jobTitle} onChange={(e) => handleFieldChange(currentReviewIndex, 'professional', 'jobTitle', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Date Joined</label>
+                      <input type="date" value={emp.professional.dateJoined} onChange={(e) => handleFieldChange(currentReviewIndex, 'professional', 'dateJoined', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card" style={{ border: '1px solid #eee', padding: '15px', borderRadius: '8px' }}>
+                  <h4 style={{ color: 'var(--saffron, orange)', borderBottom: '2px solid var(--saffron, orange)', paddingBottom: '5px', marginBottom: '15px' }}>Bank Details</h4>
+                  <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Bank Name</label>
+                      <input type="text" value={emp.bank.bankName} onChange={(e) => handleFieldChange(currentReviewIndex, 'bank', 'bankName', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>Personal Account No</label>
+                      <input type="text" value={emp.bank.personalAccountNumber} onChange={(e) => handleFieldChange(currentReviewIndex, 'bank', 'personalAccountNumber', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#666', marginBottom: '4px' }}>IFSC</label>
+                      <input type="text" value={emp.bank.personalIfsc} onChange={(e) => handleFieldChange(currentReviewIndex, 'bank', 'personalIfsc', e.target.value)} className="bulk-cell-input" style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            );
+          })()}
+
+          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex >= parsedData.length && (
+            <div className="bulk-review-panel">
+               <div className="bulk-review-banner">
+                <i className="ti ti-check" aria-hidden="true" />
+                <div>
+                  <p className="bulk-review-count">
+                    Review Complete
+                  </p>
+                  <p className="bulk-review-sub">You have accepted {acceptedEmployees.length} employees out of {parsedData.length}.</p>
+                </div>
               </div>
             </div>
           )}
@@ -542,14 +562,34 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          {activeTab === 'review' && parsedData.length > 0 && (
+          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex < parsedData.length && (
             <>
-              <button type="button" className="btn btn-secondary" onClick={goUploadTab}>
-                <i className="ti ti-arrow-left" style={{ marginRight: 6 }} aria-hidden="true" />
-                Back to upload
+              <button type="button" className="btn btn-danger" onClick={() => setCurrentReviewIndex(currentReviewIndex + 1)}>
+                Reject & Skip
               </button>
-              <button type="button" className="btn btn-success" onClick={handleSubmit} disabled={loading}>
-                {loading ? 'Uploading…' : 'Confirm & upload'}
+              <button type="button" className="btn btn-success" onClick={() => {
+                const emp = parsedData[currentReviewIndex];
+                if (!emp.user.email) {
+                  alert("Email is mandatory to accept this employee.");
+                  return;
+                }
+                setAcceptedEmployees([...acceptedEmployees, emp]);
+                setCurrentReviewIndex(currentReviewIndex + 1);
+              }}>
+                Accept & Next
+              </button>
+            </>
+          )}
+          {activeTab === 'review' && parsedData.length > 0 && currentReviewIndex >= parsedData.length && (
+            <>
+              <button type="button" className="btn btn-secondary" onClick={() => {
+                setCurrentReviewIndex(0);
+                setAcceptedEmployees([]);
+              }}>
+                Review Again
+              </button>
+              <button type="button" className="btn btn-success" onClick={handleSubmit} disabled={loading || acceptedEmployees.length === 0}>
+                {loading ? 'Uploading…' : `Confirm & Upload ${acceptedEmployees.length} Employees`}
               </button>
             </>
           )}

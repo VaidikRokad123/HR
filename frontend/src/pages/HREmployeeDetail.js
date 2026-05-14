@@ -3,6 +3,46 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 import './EmployeeDashboard.css';
+
+const departmentOptions = [
+  "Product & Delivery",
+  "Human Resources",
+  "Sales & marketing",
+  "Design",
+  "Engineering"
+];
+
+const designationOptions = [
+  "SR Quality Assurance Engineer",
+  "Team Lead - Software Development",
+  "Software Development Engineer - SDE 3",
+  "Software Development Engineer - SDE 2",
+  "Software Development Engineer - SDE 1",
+  "Software Development - Intern",
+  "Jr. Video Editor",
+  "Sr. Human Resource Executive",
+  "Product Manager",
+  "Team Lead",
+  "Jr Human Resource Executive",
+  "Sr. BDE",
+  "Sr. UI/UX",
+  "Intern-Graphics",
+  "Intern - UI/UX UI/UX Designer",
+  "Quality Assurance Engineer",
+  "Quality Assurance - Intern",
+  "JR Quality Assurance Engineer"
+];
+
+const employmentTypeOptions = [
+  "Temporary",
+  "Permanent",
+  "Contract Base",
+  "Probation",
+  "Internship",
+  "Trainee",
+  "Notice period"
+];
+
 const HREmployeeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -16,6 +56,7 @@ const HREmployeeDetail = () => {
     dateJoined: '',
     department: '',
     jobTitle: '',
+    employmentType: '',
     reportingManager: '',
     workEmail: '',
     attendanceBiometricId: '',
@@ -40,8 +81,8 @@ const HREmployeeDetail = () => {
   };
 
   const handleApprove = async () => {
-    if (!professionalData.dateJoined || !professionalData.department || 
-        !professionalData.jobTitle || !professionalData.workEmail) {
+    if (!professionalData.dateJoined || !professionalData.department ||
+        !professionalData.jobTitle || !professionalData.employmentType || !professionalData.workEmail) {
       alert('Please fill all required professional details before approving');
       return;
     }
@@ -53,7 +94,8 @@ const HREmployeeDetail = () => {
     try {
       await axios.put(`/hr/employee/${id}/approve`, professionalData);
       alert('Employee approved successfully!');
-      navigate('/hr/pending');
+      // Redirect to the pending approvals page
+      navigate('/hr/pending', { replace: true });
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to approve employee');
     }
@@ -67,7 +109,8 @@ const HREmployeeDetail = () => {
     try {
       await axios.put(`/hr/employee/${id}/reject`);
       alert('Employee rejected successfully');
-      navigate('/hr/pending');
+      // Redirect to the pending approvals page
+      navigate('/hr/pending', { replace: true });
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to reject employee');
     }
@@ -570,104 +613,126 @@ const HREmployeeDetail = () => {
             )}
               </div>
             )}
+
+            {isPending && (
+              <>
+                <hr className="divider" />
+                <div className="section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ marginBottom: '20px', fontSize: '18px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px', width: '100%' }}>Professional Details (Required for Approval)</h3>
+                  </div>
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label>Date Joined *</label>
+                      <input
+                        type="date"
+                        value={professionalData.dateJoined}
+                        onChange={(e) => setProfessionalData({...professionalData, dateJoined: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Department *</label>
+                      <select
+                        value={professionalData.department}
+                        onChange={(e) => setProfessionalData({...professionalData, department: e.target.value})}
+                        required
+                      >
+                        <option value="">Select Department</option>
+                        {departmentOptions.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Designation *</label>
+                      <select
+                        value={professionalData.jobTitle}
+                        onChange={(e) => setProfessionalData({...professionalData, jobTitle: e.target.value})}
+                        required
+                      >
+                        <option value="">Select Designation</option>
+                        {designationOptions.map(title => <option key={title} value={title}>{title}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Employment Type *</label>
+                      <select
+                        value={professionalData.employmentType}
+                        onChange={(e) => setProfessionalData({...professionalData, employmentType: e.target.value})}
+                        required
+                      >
+                        <option value="">Select Employment Type</option>
+                        {employmentTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Work Email *</label>
+                      <input
+                        type="email"
+                        value={professionalData.workEmail}
+                        onChange={(e) => setProfessionalData({...professionalData, workEmail: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Reporting Manager</label>
+                      <input
+                        type="text"
+                        value={professionalData.reportingManager}
+                        onChange={(e) => setProfessionalData({...professionalData, reportingManager: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Biometric ID</label>
+                      <input
+                        type="text"
+                        value={professionalData.attendanceBiometricId}
+                        onChange={(e) => setProfessionalData({...professionalData, attendanceBiometricId: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Status</label>
+                      <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <label className="checkbox-label" style={{ margin: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={professionalData.inProbation}
+                            onChange={(e) => setProfessionalData({...professionalData, inProbation: e.target.checked})}
+                          />
+                          In Probation
+                        </label>
+                      </div>
+                    </div>
+
+                    {professionalData.inProbation && (
+                      <div className="form-group">
+                        <label>Probation Duration (in months)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Enter months (e.g., 3)"
+                          value={professionalData.probationDuration}
+                          onChange={(e) => setProfessionalData({...professionalData, probationDuration: e.target.value})}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Right Column */}
+        {!isPending && (
         <div className="profile-column right-column">
-          {isPending && (
-            <div className="card">
-            <h3>Professional Details (Required for Approval)</h3>
-            <div className="grid-2">
-              <div className="form-group">
-                <label>Date Joined *</label>
-                <input
-                  type="date"
-                  value={professionalData.dateJoined}
-                  onChange={(e) => setProfessionalData({...professionalData, dateJoined: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Department *</label>
-                <input
-                  type="text"
-                  value={professionalData.department}
-                  onChange={(e) => setProfessionalData({...professionalData, department: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Job Title *</label>
-                <input
-                  type="text"
-                  value={professionalData.jobTitle}
-                  onChange={(e) => setProfessionalData({...professionalData, jobTitle: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Work Email *</label>
-                <input
-                  type="email"
-                  value={professionalData.workEmail}
-                  onChange={(e) => setProfessionalData({...professionalData, workEmail: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Reporting Manager</label>
-                <input
-                  type="text"
-                  value={professionalData.reportingManager}
-                  onChange={(e) => setProfessionalData({...professionalData, reportingManager: e.target.value})}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Biometric ID</label>
-                <input
-                  type="text"
-                  value={professionalData.attendanceBiometricId}
-                  onChange={(e) => setProfessionalData({...professionalData, attendanceBiometricId: e.target.value})}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Status</label>
-                <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <label className="checkbox-label" style={{ margin: 0 }}>
-                    <input
-                      type="checkbox"
-                      checked={professionalData.inProbation}
-                      onChange={(e) => setProfessionalData({...professionalData, inProbation: e.target.checked})}
-                    />
-                    In Probation
-                  </label>
-                </div>
-              </div>
-
-              {professionalData.inProbation && (
-                <div className="form-group">
-                  <label>Probation Duration (in months)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Enter months (e.g., 3)"
-                    value={professionalData.probationDuration}
-                    onChange={(e) => setProfessionalData({...professionalData, probationDuration: e.target.value})}
-                  />
-                </div>
-              )}
-            </div>
-            </div>
-          )}
-
-          {!isPending && professional && (
+          {professional && (
             <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px' }}>
                 <h3 style={{ fontSize: '18px', margin: 0 }}>Professional Information</h3>
@@ -684,19 +749,33 @@ const HREmployeeDetail = () => {
               <div className="grid-2">
                 <div className="form-group">
                   <label>Department</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.professional?.department || ''}
                     onChange={(e) => handleInputChange('professional', 'department', e.target.value)}
-                  />
+                  >
+                    <option value="">Select Department</option>
+                    {departmentOptions.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label>Job Title</label>
-                  <input
-                    type="text"
+                  <label>Designation</label>
+                  <select
                     value={formData.professional?.jobTitle || ''}
                     onChange={(e) => handleInputChange('professional', 'jobTitle', e.target.value)}
-                  />
+                  >
+                    <option value="">Select Designation</option>
+                    {designationOptions.map(title => <option key={title} value={title}>{title}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Employment Type</label>
+                  <select
+                    value={formData.professional?.employmentType || ''}
+                    onChange={(e) => handleInputChange('professional', 'employmentType', e.target.value)}
+                  >
+                    <option value="">Select Employment Type</option>
+                    {employmentTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label>Date Joined</label>
@@ -777,6 +856,7 @@ const HREmployeeDetail = () => {
               <div className="grid-2">
                 <p><strong>Department:</strong> {professional.department}</p>
                 <p><strong>Job Title:</strong> {professional.jobTitle}</p>
+                <p><strong>Employment Type:</strong> {professional.employmentType || 'N/A'}</p>
                 <p><strong>Date Joined:</strong> {new Date(professional.dateJoined).toLocaleDateString()}</p>
                 <p><strong>Reporting Manager:</strong> {professional.reportingManager || 'N/A'}</p>
                 <p><strong>Work Email:</strong> {professional.workEmail}</p>
@@ -927,6 +1007,7 @@ const HREmployeeDetail = () => {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Action Buttons */}

@@ -49,6 +49,7 @@ router.put('/employee/:id/approve', [
   body('dateJoined').isISO8601(),
   body('department').notEmpty(),
   body('jobTitle').notEmpty(),
+  body('employmentType').notEmpty(),
   body('workEmail').isEmail()
 ], approveEmployee);
 

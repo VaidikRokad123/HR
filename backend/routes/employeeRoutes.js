@@ -2,6 +2,10 @@ import express from 'express';
 import { body } from 'express-validator';
 import { getWaitingStatus, getMyDetails, completeProfile } from '../controllers/employeeController.js';
 import { auth, employeeOnly } from '../middleware/authMiddleware.js';
+import EmployeePersonalModel from '../models/EmployeePersonalModel.js';
+import EmployeeFamilyModel from '../models/EmployeeFamilyModel.js';
+import EmployeeAddressModel from '../models/EmployeeAddressModel.js';
+import EmployeeEmergencyModel from '../models/EmployeeEmergencyModel.js';
 
 const router = express.Router();
 
@@ -62,5 +66,63 @@ router.put('/complete-profile', [
     .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Invalid IFSC code format (e.g., SBIN0001234)'),
   linkedinUrlValidator
 ], completeProfile);
+
+// @route   PUT /api/employee/edit
+// @desc    Edit employee's own profile modules
+// @access  Private (Employee)
+router.put('/edit', auth, employeeOnly, async (req, res) => {
+  try {
+    const { module, data } = req.body;
+    const userId = req.user.id;
+
+    if (!module || !data) {
+      return res.status(400).json({ message: 'Module and data are required' });
+    }
+
+    let updated;
+
+    switch (module) {
+      case 'personal':
+        updated = await EmployeePersonalModel.findOneAndUpdate(
+          { userId },
+          data,
+          { new: true, runValidators: true }
+        );
+        break;
+
+      case 'family':
+        updated = await EmployeeFamilyModel.findOneAndUpdate(
+          { userId },
+          data,
+          { new: true, runValidators: true }
+        );
+        break;
+
+      case 'address':
+        updated = await EmployeeAddressModel.findOneAndUpdate(
+          { userId },
+          data,
+          { new: true, runValidators: true }
+        );
+        break;
+
+      case 'emergency':
+        updated = await EmployeeEmergencyModel.findOneAndUpdate(
+          { userId },
+          data,
+          { new: true, runValidators: true }
+        );
+        break;
+
+      default:
+        return res.status(400).json({ message: 'Invalid module name or editing this module is not allowed' });
+    }
+
+    res.json({ message: `${module} details updated successfully`, data: updated });
+  } catch (error) {
+    console.error('Edit employee error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 export default router;

@@ -254,11 +254,42 @@ const Signup = () => {
       <div className="card" style={{ maxWidth: '800px', margin: '40px auto' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Employee Registration</h2>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', padding: '0 20px' }}>
-          <div style={{ fontWeight: step >= 1 ? 'bold' : 'normal', color: step >= 1 ? 'var(--saffron)' : 'var(--ink)' }}>1 Personal</div>
-          <div style={{ fontWeight: step >= 2 ? 'bold' : 'normal', color: step >= 2 ? 'var(--saffron)' : 'var(--ink)' }}>2 Family</div>
-          <div style={{ fontWeight: step >= 3 ? 'bold' : 'normal', color: step >= 3 ? 'var(--saffron)' : 'var(--ink)' }}>3 Address & Emergency</div>
-          <div style={{ fontWeight: step >= 4 ? 'bold' : 'normal', color: step >= 4 ? 'var(--saffron)' : 'var(--ink)' }}>4 Review</div>
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
+          {/* Background Line */}
+          <div style={{ position: 'absolute', top: '15px', left: '12.5%', right: '12.5%', height: '3px', background: 'var(--border, #ccc)', zIndex: 1 }}></div>
+
+          {/* Progress Line */}
+          <div style={{ position: 'absolute', top: '15px', left: '12.5%', height: '3px', background: 'var(--saffron)', zIndex: 2, width: `${((step - 1) / 3) * 75}%`, transition: 'width 0.3s ease' }}></div>
+
+          {/* Steps */}
+          {[
+            { num: 1, label: 'Personal' },
+            { num: 2, label: 'Family' },
+            { num: 3, label: 'Address & Emergency' },
+            { num: 4, label: 'Review' }
+          ].map((s) => (
+            <div key={s.num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '25%' }}>
+              <div style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: step >= s.num ? 'var(--saffron)' : '#fff',
+                color: step >= s.num ? '#fff' : '#666',
+                fontWeight: 'bold', marginBottom: '8px',
+                border: `2px solid ${step >= s.num ? 'var(--saffron)' : 'var(--border, #ccc)'}`,
+                transition: 'all 0.3s ease'
+              }}>
+                {step > s.num ? '✓' : s.num}
+              </div>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: step >= s.num ? '600' : 'normal',
+                color: step >= s.num ? 'var(--saffron)' : '#666',
+                textAlign: 'center'
+              }}>
+                {s.label}
+              </div>
+            </div>
+          ))}
         </div>
 
         <form>
