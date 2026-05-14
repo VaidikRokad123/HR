@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,8 +8,20 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      if (user.status === 'pending_hr') {
+        navigate('/waiting', { replace: true });
+      } else if (user.status === 'approved' && !user.profileComplete) {
+        navigate('/employee/complete-profile', { replace: true });
+      } else {
+        navigate(user.role === 'hr' ? '/hr/pending' : '/employee/dashboard', { replace: true });
+      }
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +40,7 @@ const Login = () => {
         navigate('/employee/complete-profile', { replace: true });
       } else {
         // Fully completed users go to dashboard
-        navigate('/employee/dashboard', { replace: true });
+        navigate(user.role === 'hr' ? '/hr/pending' : '/employee/dashboard', { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -36,6 +48,10 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <div className="auth-container">

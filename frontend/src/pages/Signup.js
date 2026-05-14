@@ -1,311 +1,82 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { state_arr, s_a } from '../utils/locationData';
 
 const Signup = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sameAsCurrent, setSameAsCurrent] = useState(false);
-  
-  const { register } = useAuth();
-  const navigate = useNavigate();
-
-  // Form data
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
-    personal: {
-      fullName: '',
-      gender: '',
-      dob: '',
-      mobile: '',
-      bloodGroup: ''
-    },
-    family: {
-      fatherName: '',
-      motherName: '',
-      maritalStatus: 'Single',
-      spouseName: '',
-      marriageDate: ''
-    },
-    address: {
-      currentAddress: {
-        street: '',
-        city: '',
-        state: '',
-        pincode: '',
-        country: 'India'
-      },
-      permanentAddress: {
-        street: '',
-        city: '',
-        state: '',
-        pincode: '',
-        country: 'India'
-      }
-    },
-    emergency: {
-      emergencyContact1: {
-        name: '',
-        relationship: '',
-        mobile: ''
-      },
-      emergencyContact2: {
-        name: '',
-        relationship: '',
-        mobile: ''
-      }
-    }
+    fullName: '',
+    gender: '',
+    dob: '',
+    mobile: '',
+    bloodGroup: '',
+
+    fatherName: '',
+    motherName: '',
+    maritalStatus: 'Single',
+    spouseName: '',
+    marriageDate: '',
+
+    currentStreet: '',
+    currentState: '',
+    currentCity: '',
+    currentPincode: '',
+    sameAsCurrent: false,
+    permanentStreet: '',
+    permanentState: '',
+    permanentCity: '',
+    permanentPincode: '',
+
+    emergencyName1: '',
+    emergencyRelationship1: '',
+    emergencyMobile1: '',
+    emergencyName2: '',
+    emergencyRelationship2: '',
+    emergencyMobile2: '',
   });
 
-  const handleChange = (section, field, value) => {
-    if (section === 'root') {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    } else if (section === 'address') {
-      const [addressType, addressField] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        address: {
-          ...prev.address,
-          [addressType]: {
-            ...prev.address[addressType],
-            [addressField]: value
-          }
-        }
-      }));
-    } else if (section === 'emergency') {
-      const [contactNum, contactField] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        emergency: {
-          ...prev.emergency,
-          [contactNum]: {
-            ...prev.emergency[contactNum],
-            [contactField]: value
-          }
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [field]: value
-        }
-      }));
-    }
-  };
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [currentCityList, setCurrentCityList] = useState([]);
+  const [permanentCityList, setPermanentCityList] = useState([]);
 
-  const nextStep = () => {
-    setError('');
-    setCurrentStep(currentStep + 1);
-  };
+  const navigate = useNavigate();
+  const { login, user, loading: authLoading } = useAuth();
 
-  const prevStep = () => {
-    setError('');
-    setCurrentStep(currentStep - 1);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      let finalData = { ...formData };
-      if (sameAsCurrent) {
-        finalData.address.permanentAddress = { ...finalData.address.currentAddress };
-      }
-      await register(finalData);
-      navigate('/waiting');
-    } catch (err) {
-      const validationErrors = err.response?.data?.errors;
-      if (validationErrors?.length) {
-        setError(validationErrors.map((item) => item.msg).join(', '));
+  useEffect(() => {
+    if (user && !authLoading) {
+      if (user.status === 'pending_hr') {
+        navigate('/waiting', { replace: true });
+      } else if (user.status === 'approved' && !user.profileComplete) {
+        navigate('/employee/complete-profile', { replace: true });
       } else {
-        setError(err.response?.data?.message || err.message || 'Registration failed');
+        navigate(user.role === 'hr' ? '/hr/pending' : '/employee/dashboard', { replace: true });
       }
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user, authLoading, navigate]);
 
-  const renderStep1 = () => (
-    <div>
-      <h3>Step 1: Personal Information</h3>
-      
-      <div className="grid-2">
-        <div className="form-group">
-          <label>Email *</label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange('root', 'email', e.target.value)}
-            required
-          />
-        </div>
+  // Gender options
+  const genderOptions = ['Male', 'Female', 'Other'];
 
-        <div className="form-group">
-          <label>Password *</label>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => handleChange('root', 'password', e.target.value)}
-            required
-            minLength="6"
-          />
-        </div>
+  // Blood Group options
+  const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-        <div className="form-group">
-          <label>Confirm Password *</label>
-          <input
-            type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => handleChange('root', 'confirmPassword', e.target.value)}
-            required
-          />
-        </div>
+  // Marital Status options
+  const maritalStatusOptions = ['Single', 'Married', 'Widowed', 'Divorced', 'Separated'];
 
-        <div className="form-group">
-          <label>Full Name *</label>
-          <input
-            type="text"
-            value={formData.personal.fullName}
-            onChange={(e) => handleChange('personal', 'fullName', e.target.value)}
-            required
-          />
-        </div>
+  // Relationship options
+  const relationshipOptions = ['Father', 'Mother', 'Spouse', 'Brother', 'Sister', 'Friend', 'Other'];
 
-        <div className="form-group">
-          <label>Gender *</label>
-          <select
-            value={formData.personal.gender}
-            onChange={(e) => handleChange('personal', 'gender', e.target.value)}
-            required
-          >
-            <option value="">Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
+  // State options (from locationData)
+  const stateOptions = state_arr;
 
-        <div className="form-group">
-          <label>Date of Birth *</label>
-          <input
-            type="date"
-            value={formData.personal.dob}
-            onChange={(e) => handleChange('personal', 'dob', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Mobile Number *</label>
-          <input
-            type="tel"
-            value={formData.personal.mobile}
-            onChange={(e) => handleChange('personal', 'mobile', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Blood Group *</label>
-          <select
-            value={formData.personal.bloodGroup}
-            onChange={(e) => handleChange('personal', 'bloodGroup', e.target.value)}
-            required
-          >
-            <option value="">Select Blood Group</option>
-            <option value="A+">A+</option>
-            <option value="A-">A-</option>
-            <option value="B+">B+</option>
-            <option value="B-">B-</option>
-            <option value="AB+">AB+</option>
-            <option value="AB-">AB-</option>
-            <option value="O+">O+</option>
-            <option value="O-">O-</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div>
-      <h3>Step 2: Family Information</h3>
-      
-      <div className="grid-2">
-        <div className="form-group">
-          <label>Father's Name *</label>
-          <input
-            type="text"
-            value={formData.family.fatherName}
-            onChange={(e) => handleChange('family', 'fatherName', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Mother's Name *</label>
-          <input
-            type="text"
-            value={formData.family.motherName}
-            onChange={(e) => handleChange('family', 'motherName', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Marital Status *</label>
-          <select
-            value={formData.family.maritalStatus}
-            onChange={(e) => handleChange('family', 'maritalStatus', e.target.value)}
-            required
-          >
-            <option value="Single">Single</option>
-            <option value="Married">Married</option>
-            <option value="Widowed">Widowed</option>
-            <option value="Divorced">Divorced</option>
-            <option value="Separated">Separated</option>
-          </select>
-        </div>
-      </div>
-
-      {formData.family.maritalStatus === 'Married' && (
-        <div className="grid-2">
-          <div className="form-group">
-            <label>Spouse Name</label>
-            <input
-              type="text"
-              value={formData.family.spouseName}
-              onChange={(e) => handleChange('family', 'spouseName', e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Marriage Date</label>
-            <input
-              type="date"
-              value={formData.family.marriageDate}
-              onChange={(e) => handleChange('family', 'marriageDate', e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
+  // Function to get city options based on state
   const getCityOptions = (stateName) => {
     const stateIndex = state_arr.indexOf(stateName) + 1;
     if (stateIndex > 0 && s_a[stateIndex]) {
@@ -314,316 +85,455 @@ const Signup = () => {
     return [];
   };
 
-  const renderStep3 = () => (
-    <div style={{ overflow: 'visible' }}>
-      <h3>Step 3: Address & Emergency Contacts</h3>
-      
-      <h4>Current Address</h4>
-      <div className="grid-2">
-        <div className="form-group">
-          <label>Street *</label>
-          <input
-            type="text"
-            value={formData.address.currentAddress.street}
-            onChange={(e) => handleChange('address', 'currentAddress.street', e.target.value)}
-            required
-          />
-        </div>
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
 
-        <div className="form-group">
-          <label>State *</label>
-          <select
-            value={formData.address.currentAddress.state}
-            onChange={(e) => {
-              handleChange('address', 'currentAddress.state', e.target.value);
-              handleChange('address', 'currentAddress.city', ''); // Reset city on state change
-            }}
-            required
-          >
-            <option value="">Search State...</option>
-            {state_arr.map((state, index) => (
-              <option key={index} value={state}>{state}</option>
-            ))}
-          </select>
-        </div>
+  const handleStateChange = (e) => {
+    const stateName = e.target.value;
+    setFormData({ ...formData, currentState: stateName, currentCity: '' });
+    setCurrentCityList(getCityOptions(stateName));
+  };
 
-        <div className="form-group">
-          <label>City *</label>
-          <select
-            value={formData.address.currentAddress.city}
-            onChange={(e) => handleChange('address', 'currentAddress.city', e.target.value)}
-            required
-            disabled={!formData.address.currentAddress.state}
-          >
-            <option value="">Search City...</option>
-            {getCityOptions(formData.address.currentAddress.state).map((city, index) => (
-              <option key={index} value={city}>{city}</option>
-            ))}
-          </select>
-        </div>
+  const handlePermanentStateChange = (e) => {
+    const stateName = e.target.value;
+    setFormData({ ...formData, permanentState: stateName, permanentCity: '' });
+    setPermanentCityList(getCityOptions(stateName));
+  };
 
-        <div className="form-group">
-          <label>Pincode *</label>
-          <input
-            type="text"
-            value={formData.address.currentAddress.pincode}
-            onChange={(e) => handleChange('address', 'currentAddress.pincode', e.target.value)}
-            required
-          />
-        </div>
-      </div>
+  const handleSameAsCurrentChange = (e) => {
+    const checked = e.target.checked;
+    setFormData((prev) => ({
+      ...prev,
+      sameAsCurrent: checked,
+      ...(checked
+        ? {
+            permanentStreet: prev.currentStreet,
+            permanentState: prev.currentState,
+            permanentCity: prev.currentCity,
+            permanentPincode: prev.currentPincode,
+          }
+        : {}),
+    }));
+  };
 
-      <div style={{ margin: '16px 0' }}>
-        <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="checkbox"
-            checked={sameAsCurrent}
-            onChange={(e) => {
-              setSameAsCurrent(e.target.checked);
-              if (e.target.checked) {
-                setFormData(prev => ({
-                  ...prev,
-                  address: {
-                    ...prev.address,
-                    permanentAddress: { ...prev.address.currentAddress }
-                  }
-                }));
+  const validate = () => {
+    const errs = {};
+    // Step 1
+    if (!formData.email) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) errs.email = "Email is invalid";
+    if (!formData.password) errs.password = "Password is required";
+    if (formData.password && formData.password.length < 6) errs.password = "Password must be at least 6 characters";
+    if (formData.password !== formData.confirmPassword) errs.confirmPassword = "Passwords do not match";
+    if (!formData.fullName) errs.fullName = "Full Name is required";
+    if (!formData.gender) errs.gender = "Gender is required";
+    if (!formData.dob) errs.dob = "Date of Birth is required";
+    if (!formData.mobile) errs.mobile = "Mobile Number is required";
+    if (!formData.bloodGroup) errs.bloodGroup = "Blood Group is required";
+
+    // Step 2
+    if (!formData.fatherName) errs.fatherName = "Father's Name is required";
+    if (!formData.motherName) errs.motherName = "Mother's Name is required";
+    if (!formData.maritalStatus) errs.maritalStatus = "Marital Status is required";
+
+    // Step 3
+    if (!formData.currentStreet) errs.currentStreet = "Current Street is required";
+    if (!formData.currentState) errs.currentState = "Current State is required";
+    if (!formData.currentCity) errs.currentCity = "Current City is required";
+    if (!formData.currentPincode) errs.currentPincode = "Current Pincode is required";
+
+    if (!formData.sameAsCurrent) {
+      if (!formData.permanentStreet) errs.permanentStreet = "Permanent Street is required";
+      if (!formData.permanentState) errs.permanentState = "Permanent State is required";
+      if (!formData.permanentCity) errs.permanentCity = "Permanent City is required";
+      if (!formData.permanentPincode) errs.permanentPincode = "Permanent Pincode is required";
+    }
+
+    if (!formData.emergencyName1) errs.emergencyName1 = "Emergency Contact 1 Name is required";
+    if (!formData.emergencyRelationship1) errs.emergencyRelationship1 = "Emergency Contact 1 Relationship is required";
+    if (!formData.emergencyMobile1) errs.emergencyMobile1 = "Emergency Contact 1 Mobile is required";
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleNext = () => {
+    if (step === 3) {
+      validate(); // trigger validation and show errors on step 4
+    }
+    setStep(step + 1);
+  };
+
+  const handlePrev = () => {
+    setStep(step - 1);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError('');
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        email: formData.email,
+        password: formData.password,
+        personal: {
+          fullName: formData.fullName,
+          gender: formData.gender,
+          dob: formData.dob,
+          mobile: formData.mobile,
+          bloodGroup: formData.bloodGroup,
+        },
+        family: {
+          fatherName: formData.fatherName,
+          motherName: formData.motherName,
+          maritalStatus: formData.maritalStatus,
+          spouseName: formData.spouseName,
+          marriageDate: formData.marriageDate,
+        },
+        address: {
+          currentAddress: {
+            street: formData.currentStreet,
+            city: formData.currentCity,
+            state: formData.currentState,
+            pincode: formData.currentPincode,
+            country: 'India',
+          },
+          permanentAddress: {
+            street: formData.sameAsCurrent ? formData.currentStreet : formData.permanentStreet,
+            city: formData.sameAsCurrent ? formData.currentCity : formData.permanentCity,
+            state: formData.sameAsCurrent ? formData.currentState : formData.permanentState,
+            pincode: formData.sameAsCurrent ? formData.currentPincode : formData.permanentPincode,
+            country: 'India',
+          },
+        },
+        emergency: {
+          emergencyContact1: {
+            name: formData.emergencyName1,
+            relationship: formData.emergencyRelationship1,
+            mobile: formData.emergencyMobile1,
+          },
+          ...(formData.emergencyName2
+            ? {
+                emergencyContact2: {
+                  name: formData.emergencyName2,
+                  relationship: formData.emergencyRelationship2,
+                  mobile: formData.emergencyMobile2,
+                },
               }
-            }}
-          />
-          Permanent Address is the same as Current Address
-        </label>
-      </div>
+            : {}),
+        },
+      };
 
-      {!sameAsCurrent && (
-        <>
-          <h4>Permanent Address</h4>
-          <div className="grid-2">
-            <div className="form-group">
-              <label>Street *</label>
-              <input
-                type="text"
-                value={formData.address.permanentAddress.street}
-                onChange={(e) => handleChange('address', 'permanentAddress.street', e.target.value)}
-                required={!sameAsCurrent}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>State *</label>
-              <select
-                value={formData.address.permanentAddress.state}
-                onChange={(e) => {
-                  handleChange('address', 'permanentAddress.state', e.target.value);
-                  handleChange('address', 'permanentAddress.city', ''); // Reset city on state change
-                }}
-                required={!sameAsCurrent}
-              >
-                <option value="">Search State...</option>
-                {state_arr.map((state, index) => (
-                  <option key={index} value={state}>{state}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>City *</label>
-              <select
-                value={formData.address.permanentAddress.city}
-                onChange={(e) => handleChange('address', 'permanentAddress.city', e.target.value)}
-                required={!sameAsCurrent}
-                disabled={!formData.address.permanentAddress.state}
-              >
-                <option value="">Search City...</option>
-                {getCityOptions(formData.address.permanentAddress.state).map((city, index) => (
-                  <option key={index} value={city}>{city}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Pincode *</label>
-              <input
-                type="text"
-                value={formData.address.permanentAddress.pincode}
-                onChange={(e) => handleChange('address', 'permanentAddress.pincode', e.target.value)}
-                required={!sameAsCurrent}
-              />
-            </div>
-          </div>
-        </>
-      )}
-
-      <h4>Emergency Contact 1 *</h4>
-      <div className="grid-2">
-        <div className="form-group">
-          <label>Name *</label>
-          <input
-            type="text"
-            value={formData.emergency.emergencyContact1.name}
-            onChange={(e) => handleChange('emergency', 'emergencyContact1.name', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Relationship *</label>
-          <select
-            value={formData.emergency.emergencyContact1.relationship}
-            onChange={(e) => handleChange('emergency', 'emergencyContact1.relationship', e.target.value)}
-            required
-          >
-            <option value="">Select Relationship</option>
-            <option value="Father">Father</option>
-            <option value="Mother">Mother</option>
-            <option value="Spouse">Spouse</option>
-            <option value="Brother">Brother</option>
-            <option value="Sister">Sister</option>
-            <option value="Friend">Friend</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Mobile *</label>
-          <input
-            type="tel"
-            value={formData.emergency.emergencyContact1.mobile}
-            onChange={(e) => handleChange('emergency', 'emergencyContact1.mobile', e.target.value)}
-            required
-          />
-        </div>
-      </div>
-
-      <h4>Emergency Contact 2 (Optional)</h4>
-      <div className="grid-2">
-        <div className="form-group">
-          <label>Name</label>
-          <input
-            type="text"
-            value={formData.emergency.emergencyContact2.name}
-            onChange={(e) => handleChange('emergency', 'emergencyContact2.name', e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Relationship</label>
-          <select
-            value={formData.emergency.emergencyContact2.relationship}
-            onChange={(e) => handleChange('emergency', 'emergencyContact2.relationship', e.target.value)}
-          >
-            <option value="">Select Relationship</option>
-            <option value="Father">Father</option>
-            <option value="Mother">Mother</option>
-            <option value="Spouse">Spouse</option>
-            <option value="Brother">Brother</option>
-            <option value="Sister">Sister</option>
-            <option value="Friend">Friend</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Mobile</label>
-          <input
-            type="tel"
-            value={formData.emergency.emergencyContact2.mobile}
-            onChange={(e) => handleChange('emergency', 'emergencyContact2.mobile', e.target.value)}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div>
-      <h3>Step 4: Review & Submit</h3>
+      await axios.post('/auth/register', payload);
       
-      <div className="card">
-        <h4>Personal Information</h4>
-        <p><strong>Name:</strong> {formData.personal.fullName}</p>
-        <p><strong>Email:</strong> {formData.email}</p>
-        <p><strong>Gender:</strong> {formData.personal.gender}</p>
-        <p><strong>DOB:</strong> {formData.personal.dob}</p>
-        <p><strong>Mobile:</strong> {formData.personal.mobile}</p>
-        <p><strong>Blood Group:</strong> {formData.personal.bloodGroup}</p>
-      </div>
+      try {
+        await login(formData.email, formData.password);
+        navigate('/waiting', { replace: true });
+      } catch (loginErr) {
+        navigate('/login');
+      }
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || 'Failed to register employee');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="card">
-        <h4>Family Information</h4>
-        <p><strong>Father:</strong> {formData.family.fatherName}</p>
-        <p><strong>Mother:</strong> {formData.family.motherName}</p>
-        <p><strong>Marital Status:</strong> {formData.family.maritalStatus}</p>
-        {formData.family.maritalStatus === 'Married' && (
-          <>
-            <p><strong>Spouse:</strong> {formData.family.spouseName}</p>
-            <p><strong>Marriage Date:</strong> {formData.family.marriageDate}</p>
-          </>
-        )}
-      </div>
-
-      <div className="card">
-        <h4>Emergency Contact</h4>
-        <p><strong>Name:</strong> {formData.emergency.emergencyContact1.name}</p>
-        <p><strong>Relationship:</strong> {formData.emergency.emergencyContact1.relationship}</p>
-        <p><strong>Mobile:</strong> {formData.emergency.emergencyContact1.mobile}</p>
-      </div>
-    </div>
-  );
+  if (authLoading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
-    <div className="wizard-container">
-      <div className="card">
-        <h2>Employee Registration</h2>
+    <div className="container">
+      <div className="card" style={{ maxWidth: '800px', margin: '40px auto' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Employee Registration</h2>
 
-        {/* Wizard Steps */}
-        <div className="wizard-steps">
-          {[1, 2, 3, 4].map((step) => (
-            <div 
-              key={step} 
-              className={`wizard-step ${currentStep === step ? 'active' : ''} ${currentStep > step ? 'completed' : ''}`}
-            >
-              <div className="wizard-step-number">{step}</div>
-              <div className="wizard-step-label">
-                {step === 1 && 'Personal'}
-                {step === 2 && 'Family'}
-                {step === 3 && 'Address & Emergency'}
-                {step === 4 && 'Review'}
-              </div>
-            </div>
-          ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', padding: '0 20px' }}>
+          <div style={{ fontWeight: step >= 1 ? 'bold' : 'normal', color: step >= 1 ? 'var(--saffron)' : 'var(--ink)' }}>1 Personal</div>
+          <div style={{ fontWeight: step >= 2 ? 'bold' : 'normal', color: step >= 2 ? 'var(--saffron)' : 'var(--ink)' }}>2 Family</div>
+          <div style={{ fontWeight: step >= 3 ? 'bold' : 'normal', color: step >= 3 ? 'var(--saffron)' : 'var(--ink)' }}>3 Address & Emergency</div>
+          <div style={{ fontWeight: step >= 4 ? 'bold' : 'normal', color: step >= 4 ? 'var(--saffron)' : 'var(--ink)' }}>4 Review</div>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        <form>
+          {step === 1 && (
+            <div>
+              <h3>Step 1: Personal Information</h3>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Email *</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Password *</label>
+                  <input type="password" name="password" value={formData.password} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Confirm Password *</label>
+                  <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Full Name *</label>
+                  <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Gender *</label>
+                  <select name="gender" value={formData.gender} onChange={handleChange} required>
+                    <option value="">Select Gender</option>
+                    {genderOptions.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Date of Birth *</label>
+                  <input type="date" name="dob" value={formData.dob} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Mobile Number *</label>
+                  <input type="text" name="mobile" value={formData.mobile} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Blood Group *</label>
+                  <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} required>
+                    <option value="">Select Blood Group</option>
+                    {bloodGroupOptions.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button type="button" className="btn btn-primary" onClick={handleNext}>Next</button>
+              </div>
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                Already have an account? <Link to="/login" style={{ color: 'var(--saffron)' }}>Login</Link>
+              </div>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
+          {step === 2 && (
+            <div>
+              <h3>Step 2: Family Information</h3>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Father's Name *</label>
+                  <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Mother's Name *</label>
+                  <input type="text" name="motherName" value={formData.motherName} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Marital Status *</label>
+                  <select name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} required>
+                    {maritalStatusOptions.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.maritalStatus === 'Married' && (
+                  <>
+                    <div className="form-group">
+                      <label>Spouse Name</label>
+                      <input type="text" name="spouseName" value={formData.spouseName} onChange={handleChange} />
+                    </div>
+                    <div className="form-group">
+                      <label>Marriage Date</label>
+                      <input type="date" name="marriageDate" value={formData.marriageDate} onChange={handleChange} />
+                    </div>
+                  </>
+                )}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" onClick={handlePrev}>Previous</button>
+                <button type="button" className="btn btn-primary" onClick={handleNext}>Next</button>
+              </div>
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                Already have an account? <Link to="/login" style={{ color: 'var(--saffron)' }}>Login</Link>
+              </div>
+            </div>
+          )}
 
-          <div className="wizard-buttons">
-            {currentStep > 1 && (
-              <button type="button" onClick={prevStep} className="btn btn-secondary">
-                Previous
-              </button>
-            )}
-            
-            {currentStep < 4 ? (
-              <button type="button" onClick={nextStep} className="btn btn-primary">
-                Next
-              </button>
-            ) : (
-              <button type="submit" className="btn btn-success" disabled={loading}>
-                {loading ? 'Submitting...' : 'Submit Registration'}
-              </button>
-            )}
-          </div>
+          {step === 3 && (
+            <div>
+              <h3>Step 3: Address & Emergency Contacts</h3>
+              
+              <h4 style={{ color: 'var(--saffron)', marginTop: '20px' }}>Current Address</h4>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Street *</label>
+                  <input type="text" name="currentStreet" value={formData.currentStreet} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>State *</label>
+                  <select name="currentState" value={formData.currentState} onChange={handleStateChange} required>
+                    <option value="">Search State...</option>
+                    {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>City *</label>
+                  <select name="currentCity" value={formData.currentCity} onChange={handleChange} required disabled={!formData.currentState}>
+                    <option value="">Search City...</option>
+                    {currentCityList.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Pincode *</label>
+                  <input type="text" name="currentPincode" value={formData.currentPincode} onChange={handleChange} required />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginTop: '10px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input type="checkbox" name="sameAsCurrent" checked={formData.sameAsCurrent} onChange={handleSameAsCurrentChange} style={{ width: 'auto' }} />
+                  Permanent Address is the same as Current Address
+                </label>
+              </div>
+
+              {!formData.sameAsCurrent && (
+                <>
+                  <h4 style={{ color: 'var(--saffron)', marginTop: '20px' }}>Permanent Address</h4>
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label>Street *</label>
+                      <input type="text" name="permanentStreet" value={formData.permanentStreet} onChange={handleChange} required />
+                    </div>
+                    <div className="form-group">
+                      <label>State *</label>
+                      <select name="permanentState" value={formData.permanentState} onChange={handlePermanentStateChange} required>
+                        <option value="">Search State...</option>
+                        {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>City *</label>
+                      <select name="permanentCity" value={formData.permanentCity} onChange={handleChange} required disabled={!formData.permanentState}>
+                        <option value="">Search City...</option>
+                        {permanentCityList.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Pincode *</label>
+                      <input type="text" name="permanentPincode" value={formData.permanentPincode} onChange={handleChange} required />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <h4 style={{ color: 'var(--saffron)', marginTop: '20px' }}>Emergency Contact 1 *</h4>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Name *</label>
+                  <input type="text" name="emergencyName1" value={formData.emergencyName1} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Relationship *</label>
+                  <select name="emergencyRelationship1" value={formData.emergencyRelationship1} onChange={handleChange} required>
+                    <option value="">Select Relationship</option>
+                    {relationshipOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Mobile *</label>
+                  <input type="text" name="emergencyMobile1" value={formData.emergencyMobile1} onChange={handleChange} required />
+                </div>
+              </div>
+
+              <h4 style={{ color: 'var(--saffron)', marginTop: '20px' }}>Emergency Contact 2 (Optional)</h4>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Name</label>
+                  <input type="text" name="emergencyName2" value={formData.emergencyName2} onChange={handleChange} />
+                </div>
+                <div className="form-group">
+                  <label>Relationship</label>
+                  <select name="emergencyRelationship2" value={formData.emergencyRelationship2} onChange={handleChange}>
+                    <option value="">Select Relationship</option>
+                    {relationshipOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Mobile</label>
+                  <input type="text" name="emergencyMobile2" value={formData.emergencyMobile2} onChange={handleChange} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" onClick={handlePrev}>Previous</button>
+                <button type="button" className="btn btn-primary" onClick={handleNext}>Next (Review)</button>
+              </div>
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                Already have an account? <Link to="/login" style={{ color: 'var(--saffron)' }}>Login</Link>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <h3>Step 4: Review & Submit</h3>
+              
+              {Object.keys(errors).length > 0 ? (
+                <div className="alert alert-error" style={{ marginBottom: '20px', padding: '15px' }}>
+                  <strong style={{ display: 'block', marginBottom: '10px' }}>Please fix the following validation errors:</strong>
+                  <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                    {Object.values(errors).map((err, idx) => (
+                      <li key={idx} style={{ marginBottom: '5px' }}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="alert alert-success" style={{ marginBottom: '20px' }}>
+                  All required fields are completed. Please review your details and submit.
+                </div>
+              )}
+
+              {submitError && <div className="alert alert-error">{submitError}</div>}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '14px', background: 'var(--sand-dark)', padding: '20px', borderRadius: '8px' }}>
+                <div>
+                  <h4 style={{ color: 'var(--saffron)', borderBottom: '1px solid var(--border)', paddingBottom: '5px', marginBottom: '10px' }}>Personal</h4>
+                  <p style={{ marginBottom: '5px' }}><strong>Name:</strong> {formData.fullName}</p>
+                  <p style={{ marginBottom: '5px' }}><strong>Email:</strong> {formData.email}</p>
+                  <p style={{ marginBottom: '5px' }}><strong>Mobile:</strong> {formData.mobile}</p>
+                </div>
+                <div>
+                  <h4 style={{ color: 'var(--saffron)', borderBottom: '1px solid var(--border)', paddingBottom: '5px', marginBottom: '10px' }}>Family</h4>
+                  <p style={{ marginBottom: '5px' }}><strong>Father:</strong> {formData.fatherName}</p>
+                  <p style={{ marginBottom: '5px' }}><strong>Mother:</strong> {formData.motherName}</p>
+                </div>
+                <div>
+                  <h4 style={{ color: 'var(--saffron)', borderBottom: '1px solid var(--border)', paddingBottom: '5px', marginBottom: '10px' }}>Address</h4>
+                  <p style={{ marginBottom: '5px' }}><strong>Current City:</strong> {formData.currentCity}</p>
+                  <p style={{ marginBottom: '5px' }}><strong>Current State:</strong> {formData.currentState}</p>
+                </div>
+                <div>
+                  <h4 style={{ color: 'var(--saffron)', borderBottom: '1px solid var(--border)', paddingBottom: '5px', marginBottom: '10px' }}>Emergency</h4>
+                  <p style={{ marginBottom: '5px' }}><strong>Contact 1:</strong> {formData.emergencyName1} ({formData.emergencyRelationship1})</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px' }}>
+                <button type="button" className="btn btn-secondary" onClick={handlePrev}>Previous (Edit)</button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleSubmit} 
+                  disabled={loading || Object.keys(errors).length > 0}
+                >
+                  {loading ? 'Submitting...' : 'Submit Registration'}
+                </button>
+              </div>
+            </div>
+          )}
         </form>
-
-        <p style={{ marginTop: '16px', textAlign: 'center' }}>
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
       </div>
     </div>
   );

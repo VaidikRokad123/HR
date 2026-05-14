@@ -39,10 +39,25 @@ router.get('/my-details', auth, employeeOnly, getMyDetails);
 router.put('/complete-profile', [
   auth,
   employeeOnly,
-  body('bankName').notEmpty().withMessage('Bank name is required'),
-  body('branch').notEmpty().withMessage('Branch is required'),
-  body('personalAccountNumber').notEmpty().withMessage('Personal account number is required'),
-  body('personalIfsc')
+  body('companyOpensBank').isBoolean().withMessage('companyOpensBank must be a boolean'),
+
+  // Conditional validation for bank details when companyOpensBank is TRUE
+  body('panNumber')
+    .if(body('companyOpensBank').equals(true))
+    .notEmpty().withMessage('PAN Number is required when company opens bank account'),
+  body('aadharNumber')
+    .if(body('companyOpensBank').equals(true))
+    .notEmpty().withMessage('Aadhar Number is required when company opens bank account'),
+  body('permissionToUsePanAadhar')
+    .if(body('companyOpensBank').equals(true))
+    .isBoolean().withMessage('Permission to use PAN/Aadhar must be a boolean')
+    .equals(true).withMessage('Permission to use PAN/Aadhar must be granted'),
+
+  // Conditional validation for bank details when companyOpensBank is FALSE
+  body('bankName').if(body('companyOpensBank').equals(false)).notEmpty().withMessage('Bank name is required'),
+  body('branch').if(body('companyOpensBank').equals(false)).notEmpty().withMessage('Branch is required'),
+  body('personalAccountNumber').if(body('companyOpensBank').equals(false)).notEmpty().withMessage('Personal account number is required'),
+  body('personalIfsc').if(body('companyOpensBank').equals(false))
     .notEmpty().withMessage('Personal IFSC code is required')
     .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Invalid IFSC code format (e.g., SBIN0001234)'),
   linkedinUrlValidator

@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import BulkUploadModal from '../components/BulkUploadModal';
 
 const HRAllEmployees = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -145,11 +147,22 @@ const HRAllEmployees = () => {
             <h1>All Employees</h1>
             <p>{employees.length} approved employee(s)</p>
           </div>
-          <button className="btn btn-success" onClick={exportToExcel}>
-            <i className="ti ti-file-excel" style={{ marginRight: '6px' }}></i> Export All to Excel
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="btn btn-primary" onClick={() => setIsBulkUploadOpen(true)}>
+              <i className="ti ti-upload" style={{ marginRight: '6px' }}></i> Upload Excel
+            </button>
+            <button className="btn btn-success" onClick={exportToExcel}>
+              <i className="ti ti-file-excel" style={{ marginRight: '6px' }}></i> Export All to Excel
+            </button>
+          </div>
         </div>
       </div>
+
+      <BulkUploadModal 
+        isOpen={isBulkUploadOpen} 
+        onClose={() => setIsBulkUploadOpen(false)} 
+        onUploadSuccess={fetchAllEmployees} 
+      />
 
       {error && <div className="alert alert-error">{error}</div>}
 

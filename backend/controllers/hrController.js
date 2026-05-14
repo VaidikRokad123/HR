@@ -1,4 +1,5 @@
 import { validationResult } from 'express-validator';
+import bcrypt from 'bcryptjs';
 import UserModel from '../models/UserModel.js';
 import EmployeePersonalModel from '../models/EmployeePersonalModel.js';
 import EmployeeFamilyModel from '../models/EmployeeFamilyModel.js';
@@ -139,7 +140,8 @@ export const approveEmployee = async (req, res) => {
       reportingManager,
       workEmail,
       attendanceBiometricId,
-      inProbation
+      inProbation,
+      probationDuration
     } = req.body;
 
     const professional = new EmployeeProfessionalModel({
@@ -151,7 +153,9 @@ export const approveEmployee = async (req, res) => {
       reportingManager,
       workEmail,
       attendanceBiometricId,
-      inProbation: inProbation !== undefined ? inProbation : true
+      inProbation: inProbation !== undefined ? inProbation : true,
+      probationDuration,
+      probationEndedNotified: false
     });
 
     await professional.save();
@@ -161,7 +165,7 @@ export const approveEmployee = async (req, res) => {
       toRole: 'employee',
       toUserId: user._id,
       toEmpCode: emp_code,
-      message: `Your profile has been approved! Your employee code is ${emp_code}. Please complete your bank details and LinkedIn URL.`
+      message: `Your profile has been approved! Your employee code is ${emp_code}. Your company email for login is ${user.email}. Please complete your bank details and LinkedIn URL.`
     });
     await notification.save();
 
@@ -265,6 +269,12 @@ export const editEmployee = async (req, res) => {
         if (!user.emp_code) {
           return res.status(400).json({ message: 'Employee not approved yet' });
         }
+
+        // Reset notification flag if HR updates probation duration
+        if (data.inProbation && data.probationDuration) {
+          data.probationEndedNotified = false;
+        }
+
         updated = await EmployeeProfessionalModel.findOneAndUpdate(
           { emp_code: user.emp_code },
           data,
@@ -314,6 +324,27 @@ export const getAllEmployees = async (req, res) => {
         const emergency = await EmployeeEmergencyModel.findOne({ emp_code: user.emp_code });
         const bank = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
         
+        // Check if probation has ended and notify HR
+        if (professional && professional.inProbation && professional.probationDuration && professional.dateJoined) {
+          const months = parseInt(professional.probationDuration, 10);
+          
+          if (!isNaN(months) && !professional.probationEndedNotified) {
+            const probationEndDate = new Date(professional.dateJoined);
+            probationEndDate.setMonth(probationEndDate.getMonth() + months);
+            
+            if (new Date() >= probationEndDate) {
+              const notification = new NotificationModel({
+                toRole: 'hr',
+                message: `Probation period has ended for ${personal?.fullName || user.email} (${user.emp_code}). Please review their status.`
+              });
+              await notification.save();
+              
+              professional.probationEndedNotified = true;
+              await professional.save();
+            }
+          }
+        }
+
         return {
           user: {
             id: user._id,
@@ -430,5 +461,106 @@ export const addPayrollDetails = async (req, res) => {
   } catch (error) {
     console.error('Add payroll details error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Bulk upload employees from excel data
+// @route   POST /api/hr/bulk-upload
+// @access  Private (HR)
+export const bulkUploadEmployees = async (req, res) => {
+  try {
+    const { employees } = req.body;
+    if (!employees || !Array.isArray(employees)) {
+      return res.status(400).json({ message: 'Invalid data format. Expected an array of employees.' });
+    }
+
+    const createdUsers = [];
+    const errors = [];
+
+    // Default password for bulk uploaded users
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash('Welcome@123', salt);
+
+    for (const [index, empData] of employees.entries()) {
+      try {
+        let { user: userData, personal, professional, family, address, bank, emergency } = empData;
+        
+        let email = userData?.email || personal?.personalEmail || `temp${Date.now()}@example.com`;
+        email = email.toLowerCase().trim();
+        const empCodeFromSheet = empData.emp_code;
+
+        // Check if user exists by email or emp_code
+        let user = await UserModel.findOne({ email });
+        if (!user && empCodeFromSheet) {
+          user = await UserModel.findOne({ emp_code: empCodeFromSheet });
+        }
+
+        let isUpdate = false;
+        if (user) {
+          isUpdate = true;
+        } else {
+          const emp_code = empCodeFromSheet || await generateEmpCode();
+
+          user = new UserModel({
+            email,
+            passwordHash,
+            role: 'employee',
+            status: 'approved',
+            emp_code
+          });
+
+          await user.save();
+        }
+
+        const current_emp_code = user.emp_code;
+
+        if (personal) {
+          if (isUpdate) await EmployeePersonalModel.findOneAndUpdate({ userId: user._id }, { emp_code: current_emp_code, ...personal }, { upsert: true });
+          else await new EmployeePersonalModel({ userId: user._id, emp_code: current_emp_code, ...personal }).save();
+        }
+
+        if (professional) {
+          if (isUpdate) await EmployeeProfessionalModel.findOneAndUpdate({ userId: user._id }, { emp_code: current_emp_code, ...professional }, { upsert: true });
+          else await new EmployeeProfessionalModel({ userId: user._id, emp_code: current_emp_code, ...professional }).save();
+        }
+
+        if (family) {
+          if (isUpdate) await EmployeeFamilyModel.findOneAndUpdate({ userId: user._id }, { emp_code: current_emp_code, ...family }, { upsert: true });
+          else await new EmployeeFamilyModel({ userId: user._id, emp_code: current_emp_code, ...family }).save();
+        }
+
+        if (address) {
+          if (isUpdate) await EmployeeAddressModel.findOneAndUpdate({ userId: user._id }, { emp_code: current_emp_code, ...address }, { upsert: true });
+          else await new EmployeeAddressModel({ userId: user._id, emp_code: current_emp_code, ...address }).save();
+        }
+
+        if (bank) {
+          if (isUpdate) await EmployeeBankModel.findOneAndUpdate({ emp_code: current_emp_code }, { userId: user._id, ...bank }, { upsert: true });
+          else await new EmployeeBankModel({ userId: user._id, emp_code: current_emp_code, ...bank }).save();
+        }
+        
+        if (emergency) {
+          if (isUpdate) await EmployeeEmergencyModel.findOneAndUpdate({ userId: user._id }, { emp_code: current_emp_code, ...emergency }, { upsert: true });
+          else await new EmployeeEmergencyModel({ userId: user._id, emp_code: current_emp_code, ...emergency }).save();
+        }
+
+        createdUsers.push({ email, emp_code: current_emp_code, isUpdate });
+
+      } catch (err) {
+        console.error(`Error processing row ${index}:`, err);
+        errors.push({ index, message: err.message });
+      }
+    }
+
+    res.status(200).json({
+      message: 'Bulk upload completed',
+      successCount: createdUsers.length,
+      errorCount: errors.length,
+      createdUsers,
+      errors
+    });
+  } catch (error) {
+    console.error('Bulk upload error:', error);
+    res.status(500).json({ message: 'Server error during bulk upload' });
   }
 };

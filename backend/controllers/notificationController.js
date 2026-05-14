@@ -8,16 +8,21 @@ export const getNotifications = async (req, res) => {
     let query = {};
 
     if (req.user.role === 'hr') {
-      // HR sees all HR notifications
-      query = { toRole: 'hr' };
-    } else {
-      // Employee sees their own notifications
+      // HR sees all HR notifications, notifications targeted to them, or broadcasted
       query = {
         $or: [
-          { toUserId: req.user.userId },
-          { toEmpCode: req.user.emp_code }
+          { toRole: 'hr' },
+          { toRole: 'all' },
+          { toUserId: req.user.userId }
         ]
       };
+    } else {
+      // Employee sees their own notifications
+      const orConditions = [{ toUserId: req.user.userId }];
+      if (req.user.emp_code) {
+        orConditions.push({ toEmpCode: req.user.emp_code });
+      }
+      query = { $or: orConditions };
     }
 
     const notifications = await NotificationModel.find(query)
@@ -62,12 +67,17 @@ export const getUnreadCount = async (req, res) => {
     let query = { isRead: false };
 
     if (req.user.role === 'hr') {
-      query.toRole = 'hr';
-    } else {
       query.$or = [
-        { toUserId: req.user.userId },
-        { toEmpCode: req.user.emp_code }
+        { toRole: 'hr' },
+        { toRole: 'all' },
+        { toUserId: req.user.userId }
       ];
+    } else {
+      const orConditions = [{ toUserId: req.user.userId }];
+      if (req.user.emp_code) {
+        orConditions.push({ toEmpCode: req.user.emp_code });
+      }
+      query.$or = orConditions;
     }
 
     const count = await NotificationModel.countDocuments(query);

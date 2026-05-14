@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+import './EmployeeDashboard.css';
 const HREmployeeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -9,7 +10,6 @@ const HREmployeeDetail = () => {
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('personal');
   const [editMode, setEditMode] = useState(null); // null or module name being edited
   const [formData, setFormData] = useState({});
   const [professionalData, setProfessionalData] = useState({
@@ -19,7 +19,8 @@ const HREmployeeDetail = () => {
     reportingManager: '',
     workEmail: '',
     attendanceBiometricId: '',
-    inProbation: true
+    inProbation: true,
+    probationDuration: ''
   });
 
   useEffect(() => {
@@ -134,11 +135,18 @@ const HREmployeeDetail = () => {
   const isPending = user.status === 'pending_hr';
 
   return (
-    <div className="container">
+    <div className="container dashboard-wrapper">
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1>{personal?.fullName || 'Employee Details'}</h1>
+            <h1
+              style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: 'var(--ink)',
+                marginBottom: '5px'
+              }}
+            >{personal?.fullName || 'Employee Details'}</h1>
             <p>
               {user.emp_code ? `Employee Code: ${user.emp_code}` : 'Pending Approval'}
               {' '}
@@ -156,65 +164,17 @@ const HREmployeeDetail = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs">
-        <button 
-          className={`tab ${activeTab === 'personal' ? 'active' : ''}`}
-          onClick={() => setActiveTab('personal')}
-        >
-          Personal
-        </button>
-        <button 
-          className={`tab ${activeTab === 'family' ? 'active' : ''}`}
-          onClick={() => setActiveTab('family')}
-        >
-          Family
-        </button>
-        <button 
-          className={`tab ${activeTab === 'address' ? 'active' : ''}`}
-          onClick={() => setActiveTab('address')}
-        >
-          Address
-        </button>
-        <button 
-          className={`tab ${activeTab === 'emergency' ? 'active' : ''}`}
-          onClick={() => setActiveTab('emergency')}
-        >
-          Emergency
-        </button>
-        {isPending && (
-          <button 
-            className={`tab ${activeTab === 'professional' ? 'active' : ''}`}
-            onClick={() => setActiveTab('professional')}
-          >
-            Professional (Required)
-          </button>
-        )}
-        {!isPending && professional && (
-          <button 
-            className={`tab ${activeTab === 'professional' ? 'active' : ''}`}
-            onClick={() => setActiveTab('professional')}
-          >
-            Professional
-          </button>
-        )}
-        {!isPending && bank && (
-          <button 
-            className={`tab ${activeTab === 'bank' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bank')}
-          >
-            Bank
-          </button>
-        )}
-      </div>
-
-      {/* Tab Content */}
-      <div className="card">
-        {activeTab === 'personal' && personal && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>Personal Information</h3>
-              {!isPending && (
+      <div className="profile-layout">
+        {/* Left Column */}
+        <div className="profile-column left-column">
+          <div className="card">
+            <h3 style={{ marginBottom: '20px', fontSize: '18px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px' }}>Personal Details</h3>
+            
+            {personal && (
+              <div className="section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4>Personal Information</h4>
+                  {!isPending && (
                 editMode === 'personal' ? (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn btn-primary" onClick={() => handleEdit('personal')}>Save</button>
@@ -224,7 +184,7 @@ const HREmployeeDetail = () => {
                   <button className="btn btn-secondary" onClick={() => startEdit('personal')}>Edit</button>
                 )
               )}
-            </div>
+                </div>
             {editMode === 'personal' ? (
               <div className="grid-2">
                 <div className="form-group">
@@ -281,14 +241,16 @@ const HREmployeeDetail = () => {
                 <p><strong>Blood Group:</strong> {personal.bloodGroup}</p>
               </div>
             )}
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeTab === 'family' && family && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>Family Information</h3>
-              {!isPending && (
+            <hr className="divider" />
+
+            {family && (
+              <div className="section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4>Family Information</h4>
+                  {!isPending && (
                 editMode === 'family' ? (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn btn-primary" onClick={() => handleEdit('family')}>Save</button>
@@ -298,7 +260,7 @@ const HREmployeeDetail = () => {
                   <button className="btn btn-secondary" onClick={() => startEdit('family')}>Edit</button>
                 )
               )}
-            </div>
+                </div>
             {editMode === 'family' ? (
               <div className="grid-2">
                 <div className="form-group">
@@ -364,14 +326,16 @@ const HREmployeeDetail = () => {
                 )}
               </div>
             )}
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeTab === 'address' && address && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>Address Information</h3>
-              {!isPending && (
+            <hr className="divider" />
+
+            {address && (
+              <div className="section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4>Address Information</h4>
+                  {!isPending && (
                 editMode === 'address' ? (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn btn-primary" onClick={() => handleEdit('address')}>Save</button>
@@ -381,10 +345,10 @@ const HREmployeeDetail = () => {
                   <button className="btn btn-secondary" onClick={() => startEdit('address')}>Edit</button>
                 )
               )}
-            </div>
+                </div>
             {editMode === 'address' ? (
               <>
-                <h4>Current Address</h4>
+                <h4 style={{ color: 'orange' }}>Current Address</h4>
                 <div className="grid-2">
                   <div className="form-group">
                     <label>Street</label>
@@ -428,7 +392,7 @@ const HREmployeeDetail = () => {
                   </div>
                 </div>
                 
-                <h4 style={{ marginTop: '16px' }}>Permanent Address</h4>
+                <h4 style={{ marginTop: '16px', color: 'orange' }}>Permanent Address</h4>
                 <div className="grid-2">
                   <div className="form-group">
                     <label>Street</label>
@@ -474,14 +438,14 @@ const HREmployeeDetail = () => {
               </>
             ) : (
               <>
-                <h4>Current Address</h4>
+                <h4 style={{ color: 'orange' }}>Current Address</h4>
                 <p>
                   {address.currentAddress.street}, {address.currentAddress.city}, 
                   {address.currentAddress.state} - {address.currentAddress.pincode}, 
                   {address.currentAddress.country}
                 </p>
                 
-                <h4 style={{ marginTop: '16px' }}>Permanent Address</h4>
+                <h4 style={{ marginTop: '16px', color: 'orange' }}>Permanent Address</h4>
                 <p>
                   {address.permanentAddress.street}, {address.permanentAddress.city}, 
                   {address.permanentAddress.state} - {address.permanentAddress.pincode}, 
@@ -489,14 +453,16 @@ const HREmployeeDetail = () => {
                 </p>
               </>
             )}
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeTab === 'emergency' && emergency && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>Emergency Contacts</h3>
-              {!isPending && (
+            <hr className="divider" />
+
+            {emergency && (
+              <div className="section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4>Emergency Contacts</h4>
+                  {!isPending && (
                 editMode === 'emergency' ? (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn btn-primary" onClick={() => handleEdit('emergency')}>Save</button>
@@ -506,10 +472,10 @@ const HREmployeeDetail = () => {
                   <button className="btn btn-secondary" onClick={() => startEdit('emergency')}>Edit</button>
                 )
               )}
-            </div>
+                </div>
             {editMode === 'emergency' ? (
               <>
-                <h4>Primary Contact</h4>
+                <h4 style={{ color: 'orange' }}>Primary Contact</h4>
                 <div className="grid-2">
                   <div className="form-group">
                     <label>Name</label>
@@ -545,7 +511,7 @@ const HREmployeeDetail = () => {
                   </div>
                 </div>
                 
-                <h4 style={{ marginTop: '16px' }}>Secondary Contact</h4>
+                <h4 style={{ marginTop: '16px', color: 'orange' }}>Secondary Contact</h4>
                 <div className="grid-2">
                   <div className="form-group">
                     <label>Name</label>
@@ -583,7 +549,7 @@ const HREmployeeDetail = () => {
               </>
             ) : (
               <>
-                <h4>Primary Contact</h4>
+                <h4 style={{ color: 'orange' }}>Primary Contact</h4>
                 <div className="grid-2">
                   <p><strong>Name:</strong> {emergency.emergencyContact1.name}</p>
                   <p><strong>Relationship:</strong> {emergency.emergencyContact1.relationship}</p>
@@ -592,7 +558,7 @@ const HREmployeeDetail = () => {
                 
                 {emergency.emergencyContact2 && emergency.emergencyContact2.name && (
                   <>
-                    <h4 style={{ marginTop: '16px' }}>Secondary Contact</h4>
+                    <h4 style={{ marginTop: '16px', color: 'orange' }}>Secondary Contact</h4>
                     <div className="grid-2">
                       <p><strong>Name:</strong> {emergency.emergencyContact2.name}</p>
                       <p><strong>Relationship:</strong> {emergency.emergencyContact2.relationship}</p>
@@ -602,11 +568,15 @@ const HREmployeeDetail = () => {
                 )}
               </>
             )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {activeTab === 'professional' && isPending && (
-          <div>
+        {/* Right Column */}
+        <div className="profile-column right-column">
+          {isPending && (
+            <div className="card">
             <h3>Professional Details (Required for Approval)</h3>
             <div className="grid-2">
               <div className="form-group">
@@ -669,8 +639,8 @@ const HREmployeeDetail = () => {
 
               <div className="form-group">
                 <label>Status</label>
-                <div style={{ height: '42px', display: 'flex', alignItems: 'center' }}>
-                  <label className="checkbox-label">
+                <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <label className="checkbox-label" style={{ margin: 0 }}>
                     <input
                       type="checkbox"
                       checked={professionalData.inProbation}
@@ -680,15 +650,28 @@ const HREmployeeDetail = () => {
                   </label>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'professional' && !isPending && professional && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>Professional Information</h3>
-              {editMode === 'professional' ? (
+              {professionalData.inProbation && (
+                <div className="form-group">
+                  <label>Probation Duration (in months)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Enter months (e.g., 3)"
+                    value={professionalData.probationDuration}
+                    onChange={(e) => setProfessionalData({...professionalData, probationDuration: e.target.value})}
+                  />
+                </div>
+              )}
+            </div>
+            </div>
+          )}
+
+          {!isPending && professional && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px' }}>
+                <h3 style={{ fontSize: '18px', margin: 0 }}>Professional Information</h3>
+                {editMode === 'professional' ? (
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="btn btn-primary" onClick={() => handleEdit('professional')}>Save</button>
                   <button className="btn btn-secondary" onClick={cancelEdit}>Cancel</button>
@@ -696,7 +679,7 @@ const HREmployeeDetail = () => {
               ) : (
                 <button className="btn btn-secondary" onClick={() => startEdit('professional')}>Edit</button>
               )}
-            </div>
+              </div>
             {editMode === 'professional' ? (
               <div className="grid-2">
                 <div className="form-group">
@@ -765,8 +748,8 @@ const HREmployeeDetail = () => {
                 </div>
                 <div className="form-group">
                   <label>Status</label>
-                  <div style={{ height: '42px', display: 'flex', alignItems: 'center' }}>
-                    <label className="checkbox-label">
+                  <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <label className="checkbox-label" style={{ margin: 0 }}>
                       <input
                         type="checkbox"
                         checked={formData.professional?.inProbation || false}
@@ -776,6 +759,19 @@ const HREmployeeDetail = () => {
                     </label>
                   </div>
                 </div>
+
+                {formData.professional?.inProbation && (
+                  <div className="form-group">
+                    <label>Probation Duration (in months)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Enter months (e.g., 3)"
+                      value={formData.professional?.probationDuration || ''}
+                      onChange={(e) => handleInputChange('professional', 'probationDuration', e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="grid-2">
@@ -790,17 +786,17 @@ const HREmployeeDetail = () => {
                 {professional.nameAsPerAadhaar && (
                   <p><strong>Name as per Aadhaar:</strong> {professional.nameAsPerAadhaar}</p>
                 )}
-                <p><strong>Probation Status:</strong> {professional.inProbation ? 'In Probation' : 'Confirmed'}</p>
+                <p><strong>Probation Status:</strong> {professional.inProbation ? `In Probation (${professional.probationDuration ? `${professional.probationDuration} Month(s)` : 'Duration Not Set'})` : 'Confirmed'}</p>
               </div>
             )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'bank' && bank && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3>Bank Details</h3>
-              {editMode === 'bank' ? (
+          {!isPending && bank && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px' }}>
+                <h3 style={{ fontSize: '18px', margin: 0 }}>Bank Details</h3>
+                {editMode === 'bank' ? (
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="btn btn-primary" onClick={() => handleEdit('bank')}>Save</button>
                   <button className="btn btn-secondary" onClick={cancelEdit}>Cancel</button>
@@ -808,7 +804,7 @@ const HREmployeeDetail = () => {
               ) : (
                 <button className="btn btn-secondary" onClick={() => startEdit('bank')}>Edit</button>
               )}
-            </div>
+              </div>
             {editMode === 'bank' ? (
               <div className="grid-2">
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -928,8 +924,9 @@ const HREmployeeDetail = () => {
                 <p><strong>Salary IFSC:</strong> {bank.salaryIfsc || 'Not Set'}</p>
               </div>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Action Buttons */}

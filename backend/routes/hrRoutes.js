@@ -8,7 +8,8 @@ import {
   editEmployee, 
   getAllEmployees,
   getPendingPayrolls,
-  addPayrollDetails
+  addPayrollDetails,
+  bulkUploadEmployees
 } from '../controllers/hrController.js';
 import { auth, hrOnly } from '../middleware/authMiddleware.js';
 
@@ -65,5 +66,10 @@ router.put('/employee/:id/edit', auth, hrOnly, editEmployee);
 // @desc    Get all approved employees
 // @access  Private (HR)
 router.get('/all-employees', auth, hrOnly, getAllEmployees);
+
+// @route   POST /api/hr/bulk-upload
+// @desc    Bulk upload employees from excel data
+// @access  Private (HR)
+router.post('/bulk-upload', auth, hrOnly, bulkUploadEmployees);
 
 export default router;

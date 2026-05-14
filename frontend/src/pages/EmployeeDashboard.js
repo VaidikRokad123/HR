@@ -152,7 +152,7 @@ const EmployeeDashboard = () => {
                 <p><strong>Reporting Manager:</strong> {professional.reportingManager || 'N/A'}</p>
                 <p><strong>Work Email:</strong> {professional.workEmail}</p>
                 <p><strong>LinkedIn:</strong> <a href={professional.linkedinUrl} target="_blank" rel="noopener noreferrer">View Profile</a></p>
-                <p><strong>Probation Status:</strong> {professional.inProbation ? 'In Probation' : 'Confirmed'}</p>
+                <p><strong>Probation Status:</strong> {professional.inProbation ? `In Probation (${professional.probationDuration ? `${professional.probationDuration} Month(s)` : 'Duration Not Set'})` : 'Confirmed'}</p>
                 {professional.nameAsPerAadhaar && (
                   <p><strong>Name as per Aadhaar:</strong> {professional.nameAsPerAadhaar}</p>
                 )}
