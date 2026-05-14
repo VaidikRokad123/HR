@@ -1,6 +1,6 @@
-# HR Management Portal - MERN Stack
+# Saeculum EMP Management Portal - MERN Stack
 
-A comprehensive Employee Management System with multi-step registration, HR approval workflow, and complete employee lifecycle management.
+A comprehensive Saeculum Employee Management System with multi-step registration, HR approval workflow, and complete employee lifecycle management.
 
 ## 📋 Table of Contents
 - [Features](#features)

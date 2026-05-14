@@ -19,9 +19,10 @@ const employeeFamilySchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  married: {
-    type: Boolean,
-    default: false
+  maritalStatus: {
+    type: String,
+    enum: ['Single', 'Married', 'Widowed', 'Divorced', 'Separated'],
+    default: 'Single'
   },
   spouseName: {
     type: String,

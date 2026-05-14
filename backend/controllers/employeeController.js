@@ -66,6 +66,10 @@ export const getMyDetails = async (req, res) => {
       // Hide salary account details from employee
       if (bankData) {
         bank = {
+          companyOpensBank: bankData.companyOpensBank,
+          panNumber: bankData.panNumber,
+          aadharNumber: bankData.aadharNumber,
+          permissionToUsePanAadhar: bankData.permissionToUsePanAadhar,
           bankName: bankData.bankName,
           branch: bankData.branch,
           personalAccountNumber: bankData.personalAccountNumber,
@@ -120,25 +124,34 @@ export const completeProfile = async (req, res) => {
       return res.status(400).json({ message: 'Profile already completed. You cannot update it again.' });
     }
 
-    const { bankName, branch, personalAccountNumber, personalIfsc, linkedinUrl, nameAsPerAadhaar } = req.body;
+    const { 
+      companyOpensBank, panNumber, aadharNumber, permissionToUsePanAadhar,
+      bankName, branch, personalAccountNumber, personalIfsc, 
+      linkedinUrl, nameAsPerAadhaar 
+    } = req.body;
 
     // Update or create bank details
     let bank = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
     
+    const bankDetails = {
+      companyOpensBank: !!companyOpensBank,
+      panNumber: companyOpensBank ? panNumber : '',
+      aadharNumber: companyOpensBank ? aadharNumber : '',
+      permissionToUsePanAadhar: companyOpensBank ? !!permissionToUsePanAadhar : false,
+      bankName: !companyOpensBank ? bankName : '',
+      branch: !companyOpensBank ? branch : '',
+      personalAccountNumber: !companyOpensBank ? personalAccountNumber : '',
+      personalIfsc: !companyOpensBank ? personalIfsc : ''
+    };
+
     if (bank) {
-      bank.bankName = bankName;
-      bank.branch = branch;
-      bank.personalAccountNumber = personalAccountNumber;
-      bank.personalIfsc = personalIfsc;
+      Object.assign(bank, bankDetails);
       await bank.save();
     } else {
       bank = new EmployeeBankModel({
         userId: user._id,
         emp_code: user.emp_code,
-        bankName,
-        branch,
-        personalAccountNumber,
-        personalIfsc
+        ...bankDetails
       });
       await bank.save();
     }
@@ -164,6 +177,7 @@ export const completeProfile = async (req, res) => {
     res.json({
       message: 'Profile completed successfully',
       bank: {
+        companyOpensBank: bank.companyOpensBank,
         bankName: bank.bankName,
         branch: bank.branch,
         personalAccountNumber: bank.personalAccountNumber,

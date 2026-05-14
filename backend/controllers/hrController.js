@@ -6,6 +6,7 @@ import EmployeeAddressModel from '../models/EmployeeAddressModel.js';
 import EmployeeEmergencyModel from '../models/EmployeeEmergencyModel.js';
 import EmployeeProfessionalModel from '../models/EmployeeProfessionalModel.js';
 import EmployeeBankModel from '../models/EmployeeBankModel.js';
+import EmployeePayrollModel from '../models/EmployeePayrollModel.js';
 import NotificationModel from '../models/NotificationModel.js';
 import { generateEmpCode } from '../utils/empCodeUtils.js';
 
@@ -119,6 +120,9 @@ export const approveEmployee = async (req, res) => {
     // Update user
     user.emp_code = emp_code;
     user.status = 'approved';
+    if (req.body.workEmail) {
+      user.email = req.body.workEmail.toLowerCase().trim();
+    }
     await user.save();
 
     // Update all employee records with emp_code
@@ -305,6 +309,10 @@ export const getAllEmployees = async (req, res) => {
       approvedUsers.map(async (user) => {
         const personal = await EmployeePersonalModel.findOne({ emp_code: user.emp_code });
         const professional = await EmployeeProfessionalModel.findOne({ emp_code: user.emp_code });
+        const family = await EmployeeFamilyModel.findOne({ emp_code: user.emp_code });
+        const address = await EmployeeAddressModel.findOne({ emp_code: user.emp_code });
+        const emergency = await EmployeeEmergencyModel.findOne({ emp_code: user.emp_code });
+        const bank = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
         
         return {
           user: {
@@ -314,17 +322,12 @@ export const getAllEmployees = async (req, res) => {
             status: user.status,
             createdAt: user.createdAt
           },
-          personal: personal ? {
-            fullName: personal.fullName,
-            mobile: personal.mobile,
-            personalEmail: personal.personalEmail
-          } : null,
-          professional: professional ? {
-            department: professional.department,
-            jobTitle: professional.jobTitle,
-            dateJoined: professional.dateJoined,
-            reportingManager: professional.reportingManager
-          } : null
+          personal,
+          professional,
+          family,
+          address,
+          emergency,
+          bank
         };
       })
     );
@@ -333,6 +336,99 @@ export const getAllEmployees = async (req, res) => {
 
   } catch (error) {
     console.error('Get all employees error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get employees pending payroll details (joined within 7 days)
+// @route   GET /api/hr/pending-payrolls
+// @access  Private (HR)
+export const getPendingPayrolls = async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // Find professional records joined within the last 7 days
+    const recentProfessionals = await EmployeeProfessionalModel.find({
+      dateJoined: { $gte: sevenDaysAgo }
+    });
+
+    const pendingPayrolls = [];
+
+    for (const prof of recentProfessionals) {
+      // Check if payroll already exists
+      const existingPayroll = await EmployeePayrollModel.findOne({ emp_code: prof.emp_code });
+      if (!existingPayroll) {
+        // Find user and personal info for display
+        const user = await UserModel.findById(prof.userId).select('email status createdAt');
+        const personal = await EmployeePersonalModel.findOne({ userId: prof.userId }).select('fullName mobile');
+        
+        pendingPayrolls.push({
+          user: {
+            id: prof.userId,
+            email: user?.email,
+            emp_code: prof.emp_code,
+            dateJoined: prof.dateJoined
+          },
+          personal
+        });
+      }
+    }
+
+    res.json(pendingPayrolls);
+  } catch (error) {
+    console.error('Get pending payrolls error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Add payroll details for an employee
+// @route   POST /api/hr/payroll/:id
+// @access  Private (HR)
+export const addPayrollDetails = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { ctc, gross, pf, pt, esic, tds } = req.body;
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    const professional = await EmployeeProfessionalModel.findOne({ userId });
+    if (!professional) {
+      return res.status(400).json({ message: 'Professional details not found for this employee' });
+    }
+
+    // Check if within 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    if (new Date(professional.dateJoined) < sevenDaysAgo) {
+      return res.status(400).json({ message: 'Cannot add payroll details after 1 week of joining' });
+    }
+
+    const existingPayroll = await EmployeePayrollModel.findOne({ userId });
+    if (existingPayroll) {
+      return res.status(400).json({ message: 'Payroll details already exist for this employee' });
+    }
+
+    const newPayroll = new EmployeePayrollModel({
+      userId,
+      emp_code: user.emp_code,
+      ctc,
+      gross,
+      pf: pf || false,
+      pt: pt || false,
+      esic: esic || false,
+      tds: tds || false
+    });
+
+    await newPayroll.save();
+
+    res.status(201).json({ message: 'Payroll details added successfully', payroll: newPayroll });
+
+  } catch (error) {
+    console.error('Add payroll details error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

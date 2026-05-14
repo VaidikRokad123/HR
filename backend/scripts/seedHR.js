@@ -32,11 +32,11 @@ const seedHR = async () => {
     }
 
     // Check if HR user already exists
-    const existingHR = await UserModel.findOne({ email: 'hr@company.com' });
+    const existingHR = await UserModel.findOne({ email: 'vaidik@saeculum.com' });
     
     if (existingHR) {
       console.log('✅ HR user already exists!');
-      console.log('Email: hr@company.com');
+      console.log('Email: vaidik@saeculum.com');
       console.log('Employee Code: ' + existingHR.emp_code);
       console.log('\n📊 Database Status:');
       console.log('- HR user: ✓');
@@ -44,20 +44,21 @@ const seedHR = async () => {
       process.exit(0);
     }
 
-    // Generate employee code for HR
-    const counter = await CounterModel.findOneAndUpdate(
-      { name: 'emp_code' },
-      { $inc: { value: 1 } },
-      { new: true, upsert: true }
-    );
-    const emp_code = `EMP${String(counter.value).padStart(4, '0')}`;
+    // Ensure counter is updated to at least 2 so future employees get EMP0003+
+    const counter = await CounterModel.findOne({ name: 'emp_code' });
+    if (counter && counter.value < 2) {
+      await CounterModel.findOneAndUpdate({ name: 'emp_code' }, { value: 2 });
+    }
+    
+    // Assign specific EMP0001 code to Vaidik
+    const emp_code = 'EMP0001';
 
     // Create HR user with employee code
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash('hr123456', salt);
+    const passwordHash = await bcrypt.hash('vaidik123', salt);
 
     const hrUser = new UserModel({
-      email: 'hr@company.com',
+      email: 'vaidik@saeculum.com',
       passwordHash,
       role: 'hr',
       emp_code: emp_code,
@@ -70,12 +71,12 @@ const seedHR = async () => {
     const hrPersonal = new EmployeePersonalModel({
       userId: hrUser._id,
       emp_code: emp_code,
-      fullName: 'HR Administrator',
-      gender: 'Other',
-      dob: new Date('1990-01-01'),
-      age: new Date().getFullYear() - 1990,
-      mobile: '0000000000',
-      personalEmail: 'hr@company.com',
+      fullName: 'Vaidik',
+      gender: 'Male',
+      dob: new Date('2005-12-04'),
+      age: 20,
+      mobile: '9408534410',
+      personalEmail: 'vaidik@saeculum.com',
       bloodGroup: 'O+'
     });
     await hrPersonal.save();
@@ -84,9 +85,9 @@ const seedHR = async () => {
     const hrFamily = new EmployeeFamilyModel({
       userId: hrUser._id,
       emp_code: emp_code,
-      fatherName: 'N/A',
-      motherName: 'N/A',
-      married: false
+      fatherName: 'M',
+      motherName: 'R',
+      maritalStatus: 'Single'
     });
     await hrFamily.save();
 
@@ -95,17 +96,17 @@ const seedHR = async () => {
       userId: hrUser._id,
       emp_code: emp_code,
       currentAddress: {
-        street: 'Company Headquarters',
-        city: 'City',
-        state: 'State',
-        pincode: '000000',
+        street: '1',
+        city: 'Amreli',
+        state: 'Gujarat',
+        pincode: '365601',
         country: 'India'
       },
       permanentAddress: {
-        street: 'Company Headquarters',
-        city: 'City',
-        state: 'State',
-        pincode: '000000',
+        street: '1',
+        city: 'Amreli',
+        state: 'Gujarat',
+        pincode: '365601',
         country: 'India'
       }
     });
@@ -116,9 +117,9 @@ const seedHR = async () => {
       userId: hrUser._id,
       emp_code: emp_code,
       emergencyContact1: {
-        name: 'Emergency Contact',
-        relationship: 'Other',
-        mobile: '0000000000'
+        name: 'Vivek',
+        relationship: 'Bro',
+        mobile: '9408534410'
       }
     });
     await hrEmergency.save();
@@ -127,15 +128,15 @@ const seedHR = async () => {
     const hrProfessional = new EmployeeProfessionalModel({
       userId: hrUser._id,
       emp_code: emp_code,
-      nameAsPerAadhaar: 'HR Administrator',
-      dateJoined: new Date(),
-      department: 'Human Resources',
-      jobTitle: 'HR Manager',
-      reportingManager: 'CEO',
-      workEmail: 'hr@company.com',
-      attendanceBiometricId: 'HR001',
-      inProbation: false,
-      linkedinUrl: 'https://www.linkedin.com/company/yourcompany'
+      nameAsPerAadhaar: 'Vaidik',
+      dateJoined: new Date('2012-12-12'),
+      department: 'IT',
+      jobTitle: 'CSE',
+      reportingManager: 'P',
+      workEmail: 'vaidik@saeculum.com',
+      attendanceBiometricId: 'EMP0001',
+      inProbation: true,
+      linkedinUrl: 'https://www.linkedin.com/in/vaidik'
     });
     await hrProfessional.save();
 
@@ -143,19 +144,17 @@ const seedHR = async () => {
     const hrBank = new EmployeeBankModel({
       userId: hrUser._id,
       emp_code: emp_code,
-      bankName: 'Company Bank',
-      branch: 'Main Branch',
-      personalAccountNumber: '0000000000',
-      personalIfsc: 'BANK0000000',
-      salaryAccountNumber: '0000000000',
-      salaryIfsc: 'BANK0000000'
+      bankName: 'Saeculum Bank',
+      branch: 'Amreli Branch',
+      personalAccountNumber: '1234567890',
+      personalIfsc: 'SAEC0001234',
     });
     await hrBank.save();
 
     console.log('\n✅ HR user created successfully with complete profile!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧 Email: hr@company.com');
-    console.log('🔑 Password: hr123456');
+    console.log('📧 Email: vaidik@saeculum.com');
+    console.log('🔑 Password: vaidik123');
     console.log('👤 Employee Code: ' + emp_code);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('\n⚠️  IMPORTANT: Change the default password in production!');

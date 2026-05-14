@@ -318,16 +318,19 @@ const HREmployeeDetail = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={formData.family?.married || false}
-                      onChange={(e) => handleInputChange('family', 'married', e.target.checked)}
-                    />
-                    {' '}Married
-                  </label>
+                  <label>Marital Status</label>
+                  <select
+                    value={formData.family?.maritalStatus || 'Single'}
+                    onChange={(e) => handleInputChange('family', 'maritalStatus', e.target.value)}
+                  >
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Widowed">Widowed</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Separated">Separated</option>
+                  </select>
                 </div>
-                {formData.family?.married && (
+                {formData.family?.maritalStatus === 'Married' && (
                   <>
                     <div className="form-group">
                       <label>Spouse Name</label>
@@ -352,8 +355,8 @@ const HREmployeeDetail = () => {
               <div className="grid-2">
                 <p><strong>Father's Name:</strong> {family.fatherName}</p>
                 <p><strong>Mother's Name:</strong> {family.motherName}</p>
-                <p><strong>Marital Status:</strong> {family.married ? 'Married' : 'Single'}</p>
-                {family.married && (
+                <p><strong>Marital Status:</strong> {family.maritalStatus}</p>
+                {family.maritalStatus === 'Married' && (
                   <>
                     <p><strong>Spouse Name:</strong> {family.spouseName}</p>
                     <p><strong>Marriage Date:</strong> {family.marriageDate ? new Date(family.marriageDate).toLocaleDateString() : 'N/A'}</p>
@@ -518,11 +521,19 @@ const HREmployeeDetail = () => {
                   </div>
                   <div className="form-group">
                     <label>Relationship</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.emergency?.emergencyContact1?.relationship || ''}
                       onChange={(e) => handleNestedInputChange('emergency', 'emergencyContact1', 'relationship', e.target.value)}
-                    />
+                    >
+                      <option value="">Select Relationship</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Brother">Brother</option>
+                      <option value="Sister">Sister</option>
+                      <option value="Friend">Friend</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Mobile</label>
@@ -546,11 +557,19 @@ const HREmployeeDetail = () => {
                   </div>
                   <div className="form-group">
                     <label>Relationship</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.emergency?.emergencyContact2?.relationship || ''}
                       onChange={(e) => handleNestedInputChange('emergency', 'emergencyContact2', 'relationship', e.target.value)}
-                    />
+                    >
+                      <option value="">Select Relationship</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Brother">Brother</option>
+                      <option value="Sister">Sister</option>
+                      <option value="Friend">Friend</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Mobile</label>
@@ -649,14 +668,17 @@ const HREmployeeDetail = () => {
               </div>
 
               <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={professionalData.inProbation}
-                    onChange={(e) => setProfessionalData({...professionalData, inProbation: e.target.checked})}
-                  />
-                  {' '}In Probation
-                </label>
+                <label>Status</label>
+                <div style={{ height: '42px', display: 'flex', alignItems: 'center' }}>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={professionalData.inProbation}
+                      onChange={(e) => setProfessionalData({...professionalData, inProbation: e.target.checked})}
+                    />
+                    In Probation
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -742,14 +764,17 @@ const HREmployeeDetail = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={formData.professional?.inProbation || false}
-                      onChange={(e) => handleInputChange('professional', 'inProbation', e.target.checked)}
-                    />
-                    {' '}In Probation
-                  </label>
+                  <label>Status</label>
+                  <div style={{ height: '42px', display: 'flex', alignItems: 'center' }}>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.professional?.inProbation || false}
+                        onChange={(e) => handleInputChange('professional', 'inProbation', e.target.checked)}
+                      />
+                      In Probation
+                    </label>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -786,6 +811,53 @@ const HREmployeeDetail = () => {
             </div>
             {editMode === 'bank' ? (
               <div className="grid-2">
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--ink)', textTransform: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.bank?.companyOpensBank || false}
+                      onChange={(e) => handleInputChange('bank', 'companyOpensBank', e.target.checked)}
+                      style={{ width: 'auto' }}
+                    />
+                    Company open bank account
+                  </label>
+                </div>
+                
+                {formData.bank?.companyOpensBank && (
+                  <>
+                    <div className="form-group">
+                      <label>PAN Number</label>
+                      <input
+                        type="text"
+                        value={formData.bank?.panNumber || ''}
+                        onChange={(e) => handleInputChange('bank', 'panNumber', e.target.value)}
+                        style={{ textTransform: 'uppercase' }}
+                        maxLength="10"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Aadhar Number</label>
+                      <input
+                        type="text"
+                        value={formData.bank?.aadharNumber || ''}
+                        onChange={(e) => handleInputChange('bank', 'aadharNumber', e.target.value)}
+                        maxLength="12"
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--ink)', textTransform: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.bank?.permissionToUsePanAadhar || false}
+                          onChange={(e) => handleInputChange('bank', 'permissionToUsePanAadhar', e.target.checked)}
+                          style={{ width: 'auto' }}
+                        />
+                        Permission granted to use PAN and Aadhar
+                      </label>
+                    </div>
+                  </>
+                )}
+
                 <div className="form-group">
                   <label>Bank Name</label>
                   <input
@@ -837,10 +909,21 @@ const HREmployeeDetail = () => {
               </div>
             ) : (
               <div className="grid-2">
-                <p><strong>Bank Name:</strong> {bank.bankName}</p>
-                <p><strong>Branch:</strong> {bank.branch}</p>
-                <p><strong>Personal Account:</strong> {bank.personalAccountNumber}</p>
-                <p><strong>Personal IFSC:</strong> {bank.personalIfsc}</p>
+                {bank.companyOpensBank && (
+                  <div style={{ gridColumn: '1 / -1', marginBottom: '10px' }}>
+                    <span className="badge badge-pending" style={{ background: 'var(--teal-mid)', color: '#fff', padding: '4px 8px', borderRadius: '4px' }}>
+                      Company Opens Bank Account
+                    </span>
+                    <p style={{ marginTop: '10px' }}><strong>PAN Number:</strong> {bank.panNumber}</p>
+                    <p><strong>Aadhar Number:</strong> {bank.aadharNumber}</p>
+                    <p><strong>Permission Granted:</strong> {bank.permissionToUsePanAadhar ? 'Yes' : 'No'}</p>
+                    <hr style={{ margin: '15px 0', borderColor: 'var(--border)' }} />
+                  </div>
+                )}
+                <p><strong>Bank Name:</strong> {bank.bankName || 'Not Set'}</p>
+                <p><strong>Branch:</strong> {bank.branch || 'Not Set'}</p>
+                <p><strong>Personal Account:</strong> {bank.personalAccountNumber || 'Not Set'}</p>
+                <p><strong>Personal IFSC:</strong> {bank.personalIfsc || 'Not Set'}</p>
                 <p><strong>Salary Account:</strong> {bank.salaryAccountNumber || 'Not Set'}</p>
                 <p><strong>Salary IFSC:</strong> {bank.salaryIfsc || 'Not Set'}</p>
               </div>

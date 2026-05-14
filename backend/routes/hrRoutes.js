@@ -6,7 +6,9 @@ import {
   approveEmployee, 
   rejectEmployee, 
   editEmployee, 
-  getAllEmployees 
+  getAllEmployees,
+  getPendingPayrolls,
+  addPayrollDetails
 } from '../controllers/hrController.js';
 import { auth, hrOnly } from '../middleware/authMiddleware.js';
 
@@ -16,6 +18,21 @@ const router = express.Router();
 // @desc    Get all pending employee registrations
 // @access  Private (HR)
 router.get('/pending-employees', auth, hrOnly, getPendingEmployees);
+
+// @route   GET /api/hr/pending-payrolls
+// @desc    Get all pending payroll details
+// @access  Private (HR)
+router.get('/pending-payrolls', auth, hrOnly, getPendingPayrolls);
+
+// @route   POST /api/hr/payroll/:id
+// @desc    Add payroll details for employee
+// @access  Private (HR)
+router.post('/payroll/:id', [
+  auth,
+  hrOnly,
+  body('ctc').isNumeric(),
+  body('gross').isNumeric()
+], addPayrollDetails);
 
 // @route   GET /api/hr/employee/:id
 // @desc    Get full employee details

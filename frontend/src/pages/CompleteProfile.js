@@ -5,6 +5,10 @@ import axios from 'axios';
 
 const CompleteProfile = () => {
   const [formData, setFormData] = useState({
+    companyOpensBank: false,
+    panNumber: '',
+    aadharNumber: '',
+    permissionToUsePanAadhar: false,
     bankName: '',
     branch: '',
     personalAccountNumber: '',
@@ -82,10 +86,10 @@ const CompleteProfile = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     });
     
     // Clear validation error for this field
@@ -100,12 +104,18 @@ const CompleteProfile = () => {
   const validateForm = () => {
     const errors = {};
     
-    if (!formData.bankName.trim()) errors.bankName = 'Bank name is required';
-    if (!formData.branch.trim()) errors.branch = 'Branch is required';
-    if (!formData.personalAccountNumber.trim()) errors.personalAccountNumber = 'Account number is required';
-    
-    const ifscError = validateIFSC(formData.personalIfsc);
-    if (ifscError) errors.personalIfsc = ifscError;
+    if (formData.companyOpensBank) {
+      if (!formData.panNumber.trim()) errors.panNumber = 'PAN Number is required';
+      if (!formData.aadharNumber.trim()) errors.aadharNumber = 'Aadhar Number is required';
+      if (!formData.permissionToUsePanAadhar) errors.permissionToUsePanAadhar = 'You must grant permission';
+    } else {
+      if (!formData.bankName.trim()) errors.bankName = 'Bank name is required';
+      if (!formData.branch.trim()) errors.branch = 'Branch is required';
+      if (!formData.personalAccountNumber.trim()) errors.personalAccountNumber = 'Account number is required';
+      
+      const ifscError = validateIFSC(formData.personalIfsc);
+      if (ifscError) errors.personalIfsc = ifscError;
+    }
     
     const linkedinError = validateLinkedInUrl(formData.linkedinUrl);
     if (linkedinError) errors.linkedinUrl = linkedinError;
@@ -168,71 +178,133 @@ const CompleteProfile = () => {
             These details will be used for salary processing and other financial transactions.
           </p>
           
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--ink)' }}>
+              <input
+                type="checkbox"
+                name="companyOpensBank"
+                checked={formData.companyOpensBank}
+                onChange={handleChange}
+                style={{ width: 'auto' }}
+              />
+              Company open bank account for me
+            </label>
+          </div>
+          
           <div className="grid-2">
-            <div className="form-group">
-              <label>Bank Name *</label>
-              <input
-                type="text"
-                name="bankName"
-                value={formData.bankName}
-                onChange={handleChange}
-                required
-                placeholder="e.g., State Bank of India"
-              />
-              {validationErrors.bankName && (
-                <small style={{ color: '#d84a4a' }}>{validationErrors.bankName}</small>
-              )}
-            </div>
+            {formData.companyOpensBank ? (
+              <>
+                <div className="form-group">
+                  <label>PAN Number *</label>
+                  <input
+                    type="text"
+                    name="panNumber"
+                    value={formData.panNumber}
+                    onChange={handleChange}
+                    style={{ textTransform: 'uppercase' }}
+                    placeholder="e.g., ABCDE1234F"
+                    maxLength="10"
+                  />
+                  {validationErrors.panNumber && (
+                    <small style={{ color: '#d84a4a' }}>{validationErrors.panNumber}</small>
+                  )}
+                </div>
 
-            <div className="form-group">
-              <label>Branch *</label>
-              <input
-                type="text"
-                name="branch"
-                value={formData.branch}
-                onChange={handleChange}
-                required
-                placeholder="e.g., Mumbai Main Branch"
-              />
-              {validationErrors.branch && (
-                <small style={{ color: '#d84a4a' }}>{validationErrors.branch}</small>
-              )}
-            </div>
+                <div className="form-group">
+                  <label>Aadhar Number *</label>
+                  <input
+                    type="text"
+                    name="aadharNumber"
+                    value={formData.aadharNumber}
+                    onChange={handleChange}
+                    placeholder="e.g., 123456789012"
+                    maxLength="12"
+                  />
+                  {validationErrors.aadharNumber && (
+                    <small style={{ color: '#d84a4a' }}>{validationErrors.aadharNumber}</small>
+                  )}
+                </div>
 
-            <div className="form-group">
-              <label>Personal Account Number *</label>
-              <input
-                type="text"
-                name="personalAccountNumber"
-                value={formData.personalAccountNumber}
-                onChange={handleChange}
-                required
-                placeholder="Enter your account number"
-              />
-              {validationErrors.personalAccountNumber && (
-                <small style={{ color: '#d84a4a' }}>{validationErrors.personalAccountNumber}</small>
-              )}
-            </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--ink)', textTransform: 'none', fontWeight: 'normal' }}>
+                    <input
+                      type="checkbox"
+                      name="permissionToUsePanAadhar"
+                      checked={formData.permissionToUsePanAadhar}
+                      onChange={handleChange}
+                      style={{ width: 'auto' }}
+                    />
+                    I grant permission to use my PAN and Aadhar for opening a bank account
+                  </label>
+                  {validationErrors.permissionToUsePanAadhar && (
+                    <small style={{ color: '#d84a4a', display: 'block', marginTop: '4px' }}>{validationErrors.permissionToUsePanAadhar}</small>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label>Bank Name *</label>
+                  <input
+                    type="text"
+                    name="bankName"
+                    value={formData.bankName}
+                    onChange={handleChange}
+                    placeholder="e.g., State Bank of India"
+                  />
+                  {validationErrors.bankName && (
+                    <small style={{ color: '#d84a4a' }}>{validationErrors.bankName}</small>
+                  )}
+                </div>
 
-            <div className="form-group">
-              <label>Personal IFSC Code *</label>
-              <input
-                type="text"
-                name="personalIfsc"
-                value={formData.personalIfsc}
-                onChange={handleChange}
-                required
-                style={{ textTransform: 'uppercase' }}
-                placeholder="e.g., SBIN0001234"
-                maxLength="11"
-              />
-              {validationErrors.personalIfsc && (
-                <small style={{ color: '#d84a4a' }}>{validationErrors.personalIfsc}</small>
-              )}
-              <small style={{ color: '#98a4ae', display: 'block', marginTop: '4px' }}>
-                11-character code (e.g., SBIN0001234)
-              </small>
-            </div>
+                <div className="form-group">
+                  <label>Branch *</label>
+                  <input
+                    type="text"
+                    name="branch"
+                    value={formData.branch}
+                    onChange={handleChange}
+                    placeholder="e.g., Mumbai Main Branch"
+                  />
+                  {validationErrors.branch && (
+                    <small style={{ color: '#d84a4a' }}>{validationErrors.branch}</small>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label>Personal Account Number *</label>
+                  <input
+                    type="text"
+                    name="personalAccountNumber"
+                    value={formData.personalAccountNumber}
+                    onChange={handleChange}
+                    placeholder="Enter your account number"
+                  />
+                  {validationErrors.personalAccountNumber && (
+                    <small style={{ color: '#d84a4a' }}>{validationErrors.personalAccountNumber}</small>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label>Personal IFSC Code *</label>
+                  <input
+                    type="text"
+                    name="personalIfsc"
+                    value={formData.personalIfsc}
+                    onChange={handleChange}
+                    style={{ textTransform: 'uppercase' }}
+                    placeholder="e.g., SBIN0001234"
+                    maxLength="11"
+                  />
+                  {validationErrors.personalIfsc && (
+                    <small style={{ color: '#d84a4a' }}>{validationErrors.personalIfsc}</small>
+                  )}
+                  <small style={{ color: '#98a4ae', display: 'block', marginTop: '4px' }}>
+                    11-character code (e.g., SBIN0001234)
+                  </small>
+                </div>
+              </>
+            )}
           </div>
 
           <h3 style={{ marginTop: '32px' }}>Professional Details</h3>

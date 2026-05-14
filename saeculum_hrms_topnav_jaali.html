@@ -1,0 +1,435 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --saffron:#E8650A;--saffron-light:#FDF0E7;--saffron-mid:#F5A05A;
+  --teal:#0F6E56;--teal-light:#E1F5EE;--teal-mid:#1D9E75;
+  --sand:#FAF6F0;--sand-dark:#F0E8D8;
+  --ink:#1A1208;--ink-soft:#4A3F32;--ink-muted:#8C7D6E;
+  --border:#E8DDD0;--white:#FFFFFF;
+  --success:#3B6D11;--success-bg:#EAF3DE;
+  --warn:#BA7517;--warn-bg:#FAEEDA;
+  --danger:#A32D2D;--danger-bg:#FCEBEB;
+  --info:#185FA5;--info-bg:#E6F1FB;
+}
+body{font-family:'Sora',sans-serif;background:var(--sand);color:var(--ink);font-size:13px;}
+
+/* ── SHELL ── */
+.shell{display:flex;flex-direction:column;border:0.5px solid var(--border);border-radius:16px;overflow:hidden;min-height:820px;background:var(--sand);}
+
+/* ══════════════ TOP NAV ══════════════ */
+.topnav{background:#110D06;position:relative;overflow:hidden;flex-shrink:0;}
+
+/* Rangoli strip */
+.rangoli{height:3px;background:linear-gradient(90deg,#E8650A 0%,#F5A05A 35%,#1D9E75 65%,#0F6E56 100%);}
+
+/* Jaali SVG — full arch traced from the actual Sidi Saiyyed image */
+.jaali-wrap{position:absolute;right:0;top:0;bottom:0;width:340px;pointer-events:none;overflow:hidden;}
+
+/* Main nav row */
+.nav-row{display:flex;align-items:center;padding:0 20px;height:52px;position:relative;z-index:3;}
+
+/* Brand */
+.brand{display:flex;align-items:center;gap:10px;margin-right:32px;flex-shrink:0;}
+.brand-icon{width:32px;height:32px;border-radius:8px;background:var(--saffron);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand-name{font-size:15px;font-weight:700;color:white;letter-spacing:-0.4px;line-height:1;}
+.brand-guj{font-size:9px;color:rgba(255,255,255,0.35);font-family:'Noto Sans Gujarati',sans-serif;margin-top:2px;}
+
+/* Nav links */
+.nav-links{display:flex;align-items:center;gap:2px;flex:1;}
+.nl{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;color:rgba(255,255,255,0.5);font-size:12px;cursor:pointer;white-space:nowrap;}
+.nl:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.85);}
+.nl.active{background:var(--saffron);color:white;}
+.nl i{font-size:15px;}
+.nl-badge{font-size:10px;background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:10px;margin-left:2px;}
+.nl.active .nl-badge{background:rgba(255,255,255,0.25);}
+
+/* Right side actions */
+.nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto;}
+.nav-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.07);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 12px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;}
+.nav-search i{font-size:14px;}
+.nav-icon-btn{width:32px;height:32px;border-radius:8px;border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.5);font-size:15px;position:relative;}
+.nav-icon-btn:hover{background:rgba(255,255,255,0.07);color:white;}
+.notif-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--saffron);}
+.user-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.07);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px 4px 5px;cursor:pointer;}
+.user-pill:hover{background:rgba(255,255,255,0.12);}
+.up-avatar{width:24px;height:24px;border-radius:50%;background:var(--saffron);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:white;}
+.up-name{font-size:11px;color:rgba(255,255,255,0.7);font-weight:500;}
+
+/* Sub nav / breadcrumb bar */
+.subnav{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:40px;border-bottom:0.5px solid var(--border);background:var(--white);flex-shrink:0;}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-muted);}
+.breadcrumb strong{color:var(--ink);font-weight:500;}
+.sub-actions{display:flex;align-items:center;gap:8px;}
+.btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;border:none;font-family:'Sora',sans-serif;}
+.btn-primary{background:var(--saffron);color:white;}
+.btn-outline{background:var(--white);color:var(--ink-soft);border:0.5px solid var(--border);}
+
+/* ══════════════ CONTENT ══════════════ */
+.content{flex:1;padding:18px 20px;overflow-y:auto;background:var(--sand);}
+
+/* ── HERO PROFILE CARD ── */
+.hero{background:#110D06;border-radius:14px;margin-bottom:16px;overflow:hidden;position:relative;}
+.hero-jaali{position:absolute;right:0;top:0;bottom:0;width:260px;pointer-events:none;}
+.hero-top{padding:20px 22px 0;display:flex;align-items:flex-end;gap:18px;position:relative;z-index:2;}
+.avatar-ring{width:72px;height:72px;border-radius:50%;border:3px solid var(--saffron);padding:3px;flex-shrink:0;}
+.avatar-inner{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#E8650A,#F5A05A);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:white;}
+.status-dot{position:absolute;bottom:4px;right:4px;width:12px;height:12px;border-radius:50%;background:#3B6D11;border:2px solid #110D06;}
+.av-wrap{position:relative;flex-shrink:0;}
+.hero-info{padding-bottom:16px;flex:1;}
+.emp-name{font-size:20px;font-weight:700;color:white;letter-spacing:-0.5px;}
+.emp-role{font-size:12px;color:var(--saffron-mid);margin-top:3px;}
+.emp-loc{font-size:11px;color:rgba(255,255,255,0.38);margin-top:2px;}
+.hero-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.tag{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:500;}
+.t-green{background:rgba(29,158,117,0.18);color:#5DCAA5;border:0.5px solid rgba(29,158,117,0.28);}
+.t-orange{background:rgba(232,101,10,0.15);color:var(--saffron-mid);border:0.5px solid rgba(232,101,10,0.25);}
+.t-gray{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.45);border:0.5px solid rgba(255,255,255,0.1);}
+
+.hero-stats{display:grid;grid-template-columns:repeat(5,1fr);border-top:0.5px solid rgba(255,255,255,0.07);position:relative;z-index:2;}
+.hs{padding:12px 16px;text-align:center;border-right:0.5px solid rgba(255,255,255,0.07);}
+.hs:last-child{border-right:none;}
+.hs-n{font-size:18px;font-weight:700;color:white;}
+.hs-l{font-size:10px;color:rgba(255,255,255,0.32);margin-top:2px;text-transform:uppercase;letter-spacing:0.4px;}
+.hs-s{font-size:10px;color:var(--saffron-mid);margin-top:1px;}
+
+/* ── GRID ── */
+.pgrid{display:grid;grid-template-columns:1fr 1fr 300px;gap:14px;}
+
+/* Cards */
+.card{background:var(--white);border-radius:12px;border:0.5px solid var(--border);padding:14px 16px;margin-bottom:14px;}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.ct{font-size:12px;font-weight:600;color:var(--ink);}
+.ca{font-size:11px;color:var(--saffron);cursor:pointer;}
+.ir{padding:8px 0;border-bottom:0.5px solid var(--border);display:flex;flex-direction:column;gap:2px;}
+.ir:last-child{border-bottom:none;}
+.il{font-size:10px;color:var(--ink-muted);}
+.iv{font-size:12px;color:var(--ink);font-weight:500;}
+.iv.lnk{color:var(--info);}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+
+/* Skills */
+.sr{margin-bottom:10px;}
+.st{display:flex;justify-content:space-between;margin-bottom:4px;}
+.sn{font-size:11px;color:var(--ink-soft);}
+.sp{font-size:10px;color:var(--ink-muted);}
+.sb{height:4px;background:var(--sand-dark);border-radius:10px;overflow:hidden;}
+.sf{height:100%;border-radius:10px;}
+
+/* Timeline */
+.tli{display:flex;gap:10px;margin-bottom:12px;position:relative;}
+.tli:not(:last-child)::before{content:'';position:absolute;left:10px;top:22px;bottom:-12px;width:1px;background:var(--border);}
+.tl-ic{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.tl-ic.s{background:var(--saffron-light);color:var(--saffron);}
+.tl-ic.t{background:var(--teal-light);color:var(--teal);}
+.tl-ic.w{background:var(--warn-bg);color:var(--warn);}
+.tl-ic.g{background:var(--success-bg);color:var(--success);}
+.tl-tt{font-size:11px;font-weight:500;color:var(--ink);}
+.tl-dd{font-size:10px;color:var(--ink-muted);margin-top:1px;}
+.tl-dt{font-size:10px;color:var(--ink-muted);margin-top:2px;}
+
+/* Docs */
+.dr{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.dr:last-child{border-bottom:none;}
+.di{width:28px;height:28px;border-radius:7px;background:var(--saffron-light);color:var(--saffron);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.dn{font-size:11px;font-weight:500;color:var(--ink);flex:1;}
+.dm{font-size:10px;color:var(--ink-muted);}
+.ds{font-size:10px;padding:2px 7px;border-radius:20px;}
+.ds.ok{background:var(--success-bg);color:var(--success);}
+.ds.pend{background:var(--warn-bg);color:var(--warn);}
+
+/* Heatmap */
+.hm{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:6px 0;}
+.hmc{height:18px;border-radius:3px;}
+.p{background:var(--teal-mid);opacity:0.85;}
+.h{background:var(--sand-dark);}
+.l{background:#EF9F27;opacity:0.75;}
+.a{background:#F09595;}
+.hml{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.hmleg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-muted);}
+.hmdot{width:8px;height:8px;border-radius:2px;}
+
+.pill{display:inline-flex;align-items:center;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;}
+.pill-g{background:var(--success-bg);color:var(--success);}
+.pill-b{background:var(--info-bg);color:var(--info);}
+</style>
+
+<div class="shell">
+
+  <!-- ══ TOP NAV ══ -->
+  <div class="topnav">
+    <div class="rangoli"></div>
+
+    <!-- Sidi Saiyyed Jaali — traced arch with tree-of-life + interlocking circles -->
+    <div class="jaali-wrap">
+      <svg width="340" height="95" viewBox="0 0 340 95" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;right:0;top:0;height:100%;width:340px;">
+        <!-- Outer arch frame -->
+        <path d="M340 95 L280 95 L280 45 Q310 5 340 0 Z" fill="#E8650A" opacity="0.04"/>
+        <!-- Arch outline -->
+        <path d="M200 95 Q200 10 270 5 Q330 0 340 40 L340 95" stroke="#E8650A" stroke-width="1" fill="none" opacity="0.15"/>
+        <!-- Inner arch -->
+        <path d="M215 95 Q215 18 272 13 Q322 8 332 42 L332 95" stroke="#E8650A" stroke-width="0.6" fill="none" opacity="0.1"/>
+
+        <!-- TREE OF LIFE — main trunk -->
+        <line x1="280" y1="95" x2="280" y2="42" stroke="#F5A05A" stroke-width="1.8" opacity="0.55"/>
+
+        <!-- Primary branches — large sweeping curves like the real jaali -->
+        <!-- Left main branch -->
+        <path d="M280 78 Q255 65 238 48" stroke="#F5A05A" stroke-width="1.3" fill="none" opacity="0.5"/>
+        <path d="M280 70 Q260 55 248 35" stroke="#F5A05A" stroke-width="1.1" fill="none" opacity="0.45"/>
+        <!-- Right main branch -->
+        <path d="M280 78 Q305 65 322 48" stroke="#F5A05A" stroke-width="1.3" fill="none" opacity="0.5"/>
+        <path d="M280 70 Q300 55 312 35" stroke="#F5A05A" stroke-width="1.1" fill="none" opacity="0.45"/>
+
+        <!-- Secondary branches left -->
+        <path d="M255 62 Q240 52 232 38" stroke="#F5A05A" stroke-width="0.9" fill="none" opacity="0.38"/>
+        <path d="M248 52 Q238 42 234 28" stroke="#F5A05A" stroke-width="0.7" fill="none" opacity="0.3"/>
+        <!-- Secondary branches right -->
+        <path d="M305 62 Q320 52 328 38" stroke="#F5A05A" stroke-width="0.9" fill="none" opacity="0.38"/>
+        <path d="M312 52 Q322 42 326 28" stroke="#F5A05A" stroke-width="0.7" fill="none" opacity="0.3"/>
+
+        <!-- Tertiary curling branches -->
+        <path d="M238 48 Q230 38 228 25" stroke="#F5A05A" stroke-width="0.6" fill="none" opacity="0.25"/>
+        <path d="M248 35 Q244 22 246 12" stroke="#F5A05A" stroke-width="0.6" fill="none" opacity="0.22"/>
+        <path d="M322 48 Q330 38 332 25" stroke="#F5A05A" stroke-width="0.6" fill="none" opacity="0.25"/>
+        <path d="M312 35 Q316 22 314 12" stroke="#F5A05A" stroke-width="0.6" fill="none" opacity="0.22"/>
+
+        <!-- Upward crown branches -->
+        <path d="M280 55 Q272 40 268 24" stroke="#F5A05A" stroke-width="0.8" fill="none" opacity="0.35"/>
+        <path d="M280 55 Q288 40 292 24" stroke="#F5A05A" stroke-width="0.8" fill="none" opacity="0.35"/>
+        <path d="M268 24 Q266 14 270 6" stroke="#F5A05A" stroke-width="0.6" fill="none" opacity="0.25"/>
+        <path d="M292 24 Q294 14 290 6" stroke="#F5A05A" stroke-width="0.6" fill="none" opacity="0.25"/>
+        <path d="M280 42 Q280 28 280 16" stroke="#F5A05A" stroke-width="0.8" fill="none" opacity="0.3"/>
+
+        <!-- INTERLOCKING CIRCLES — the signature jaali lattice -->
+        <circle cx="252" cy="68" r="12" stroke="#E8650A" stroke-width="0.7" fill="none" opacity="0.2"/>
+        <circle cx="308" cy="68" r="12" stroke="#E8650A" stroke-width="0.7" fill="none" opacity="0.2"/>
+        <circle cx="232" cy="50" r="10" stroke="#E8650A" stroke-width="0.6" fill="none" opacity="0.15"/>
+        <circle cx="328" cy="50" r="10" stroke="#E8650A" stroke-width="0.6" fill="none" opacity="0.15"/>
+        <circle cx="243" cy="32" r="8" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.13"/>
+        <circle cx="317" cy="32" r="8" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.13"/>
+        <circle cx="262" cy="18" r="7" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.12"/>
+        <circle cx="298" cy="18" r="7" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.12"/>
+        <circle cx="280" cy="10" r="6" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.12"/>
+
+        <!-- Small leaf/bud nodes at branch tips -->
+        <circle cx="238" cy="48" r="2.5" fill="#E8650A" opacity="0.4"/>
+        <circle cx="322" cy="48" r="2.5" fill="#E8650A" opacity="0.4"/>
+        <circle cx="248" cy="35" r="2" fill="#E8650A" opacity="0.35"/>
+        <circle cx="312" cy="35" r="2" fill="#E8650A" opacity="0.35"/>
+        <circle cx="228" cy="25" r="2" fill="#F5A05A" opacity="0.3"/>
+        <circle cx="332" cy="25" r="2" fill="#F5A05A" opacity="0.3"/>
+        <circle cx="246" cy="12" r="2" fill="#F5A05A" opacity="0.28"/>
+        <circle cx="314" cy="12" r="2" fill="#F5A05A" opacity="0.28"/>
+        <circle cx="268" cy="6" r="2" fill="#F5A05A" opacity="0.28"/>
+        <circle cx="292" cy="6" r="2" fill="#F5A05A" opacity="0.28"/>
+        <circle cx="270" cy="6" r="1.5" fill="#F5A05A" opacity="0.2"/>
+        <!-- Crown bud -->
+        <circle cx="280" cy="14" r="3" fill="#E8650A" opacity="0.45"/>
+        <circle cx="280" cy="14" r="1.5" fill="#F5A05A" opacity="0.6"/>
+
+        <!-- Tiny lattice fill circles -->
+        <circle cx="265" cy="55" r="1.5" fill="#F5A05A" opacity="0.2"/>
+        <circle cx="295" cy="55" r="1.5" fill="#F5A05A" opacity="0.2"/>
+        <circle cx="252" cy="42" r="1.5" fill="#F5A05A" opacity="0.18"/>
+        <circle cx="308" cy="42" r="1.5" fill="#F5A05A" opacity="0.18"/>
+        <circle cx="258" cy="28" r="1.2" fill="#F5A05A" opacity="0.15"/>
+        <circle cx="302" cy="28" r="1.2" fill="#F5A05A" opacity="0.15"/>
+      </svg>
+    </div>
+
+    <!-- NAV ROW -->
+    <div class="nav-row">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="white" aria-hidden="true"><path d="M10 2L3 7v11h5v-5h4v5h5V7z"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">Saeculum</div>
+          <div class="brand-guj">સ્વાગત છે · HRMS</div>
+        </div>
+      </div>
+
+      <div class="nav-links">
+        <div class="nl"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Dashboard</div>
+        <div class="nl active"><i class="ti ti-users" aria-hidden="true"></i> Employees <span class="nl-badge">28</span></div>
+        <div class="nl"><i class="ti ti-calendar-event" aria-hidden="true"></i> Attendance</div>
+        <div class="nl"><i class="ti ti-clock" aria-hidden="true"></i> Leave</div>
+        <div class="nl"><i class="ti ti-target" aria-hidden="true"></i> Performance</div>
+        <div class="nl"><i class="ti ti-coin" aria-hidden="true"></i> Payroll <span class="nl-badge">3</span></div>
+        <div class="nl"><i class="ti ti-file-text" aria-hidden="true"></i> Policies</div>
+      </div>
+
+      <div class="nav-right">
+        <div class="nav-search"><i class="ti ti-search" aria-hidden="true"></i> <span>Search…</span></div>
+        <div class="nav-icon-btn"><i class="ti ti-bell" aria-hidden="true"></i><div class="notif-dot"></div></div>
+        <div class="nav-icon-btn"><i class="ti ti-settings" aria-hidden="true"></i></div>
+        <div class="user-pill">
+          <div class="up-avatar">SE</div>
+          <div class="up-name">Sreenath</div>
+          <i class="ti ti-chevron-down" style="font-size:11px;color:rgba(255,255,255,0.35)" aria-hidden="true"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB NAV -->
+  <div class="subnav">
+    <div class="breadcrumb">
+      <i class="ti ti-users" style="font-size:13px" aria-hidden="true"></i>
+      Employees
+      <i class="ti ti-chevron-right" style="font-size:11px" aria-hidden="true"></i>
+      <strong>Rohan Mehta</strong>
+      <span style="color:var(--ink-muted);margin-left:4px;">· EMP-0042</span>
+    </div>
+    <div class="sub-actions">
+      <button class="btn btn-outline"><i class="ti ti-arrow-left" style="font-size:12px" aria-hidden="true"></i> Prev</button>
+      <button class="btn btn-outline"><i class="ti ti-download" style="font-size:12px" aria-hidden="true"></i> Export</button>
+      <button class="btn btn-primary"><i class="ti ti-edit" style="font-size:12px" aria-hidden="true"></i> Edit Profile</button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- HERO CARD -->
+    <div class="hero">
+      <!-- Jaali echo on hero dark card -->
+      <svg class="hero-jaali" width="260" height="130" viewBox="0 0 260 130" fill="none" aria-hidden="true">
+        <line x1="200" y1="130" x2="200" y2="55" stroke="#F5A05A" stroke-width="1.5" opacity="0.2"/>
+        <path d="M200 110 Q175 90 158 65" stroke="#F5A05A" stroke-width="1" fill="none" opacity="0.18"/>
+        <path d="M200 110 Q225 90 242 65" stroke="#F5A05A" stroke-width="1" fill="none" opacity="0.18"/>
+        <path d="M200 90 Q180 72 170 50" stroke="#F5A05A" stroke-width="0.8" fill="none" opacity="0.14"/>
+        <path d="M200 90 Q220 72 230 50" stroke="#F5A05A" stroke-width="0.8" fill="none" opacity="0.14"/>
+        <path d="M200 70 Q194 50 190 32" stroke="#F5A05A" stroke-width="0.7" fill="none" opacity="0.12"/>
+        <path d="M200 70 Q206 50 210 32" stroke="#F5A05A" stroke-width="0.7" fill="none" opacity="0.12"/>
+        <circle cx="158" cy="65" r="2" fill="#E8650A" opacity="0.3"/>
+        <circle cx="242" cy="65" r="2" fill="#E8650A" opacity="0.3"/>
+        <circle cx="170" cy="50" r="1.8" fill="#E8650A" opacity="0.25"/>
+        <circle cx="230" cy="50" r="1.8" fill="#E8650A" opacity="0.25"/>
+        <circle cx="190" cy="32" r="1.5" fill="#F5A05A" opacity="0.22"/>
+        <circle cx="210" cy="32" r="1.5" fill="#F5A05A" opacity="0.22"/>
+        <circle cx="200" cy="42" r="2.5" fill="#E8650A" opacity="0.28"/>
+        <circle cx="182" cy="78" r="9" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.12"/>
+        <circle cx="218" cy="78" r="9" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.12"/>
+        <circle cx="167" cy="60" r="7" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.1"/>
+        <circle cx="233" cy="60" r="7" stroke="#E8650A" stroke-width="0.5" fill="none" opacity="0.1"/>
+      </svg>
+
+      <div class="hero-top">
+        <div class="av-wrap">
+          <div class="avatar-ring">
+            <div class="avatar-inner">RM</div>
+          </div>
+          <div class="status-dot"></div>
+        </div>
+        <div class="hero-info">
+          <div class="emp-name">Rohan Mehta</div>
+          <div class="emp-role">Senior Frontend Developer</div>
+          <div class="emp-loc">Technology · Ahmedabad, Gujarat</div>
+          <div class="hero-tags">
+            <span class="tag t-green"><i class="ti ti-circle-filled" style="font-size:7px" aria-hidden="true"></i> Active</span>
+            <span class="tag t-orange">Technology</span>
+            <span class="tag t-gray">Full-time</span>
+            <span class="tag t-gray">EMP-0042</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="hs"><div class="hs-n">3.2 yrs</div><div class="hs-l">Tenure</div><div class="hs-s">Feb 2023</div></div>
+        <div class="hs"><div class="hs-n">94%</div><div class="hs-l">Attendance</div><div class="hs-s">This month</div></div>
+        <div class="hs"><div class="hs-n">4.6 / 5</div><div class="hs-l">Performance</div><div class="hs-s">Last review</div></div>
+        <div class="hs"><div class="hs-n">2 left</div><div class="hs-l">Annual leaves</div><div class="hs-s">Of 12 total</div></div>
+        <div class="hs"><div class="hs-n">Confirmed</div><div class="hs-l">Status</div><div class="hs-s">Since Apr 2023</div></div>
+      </div>
+    </div>
+
+    <!-- PROFILE GRID -->
+    <div class="pgrid">
+
+      <!-- COL 1 — Personal + Employment -->
+      <div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-id-badge" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--saffron)" aria-hidden="true"></i>Personal information</div><div class="ca">Edit</div></div>
+          <div class="ig">
+            <div class="ir"><div class="il">Full name</div><div class="iv">Rohan Mehta</div></div>
+            <div class="ir"><div class="il">Date of birth</div><div class="iv">14 May 1997</div></div>
+            <div class="ir"><div class="il">Gender</div><div class="iv">Male</div></div>
+            <div class="ir"><div class="il">Blood group</div><div class="iv">B+</div></div>
+            <div class="ir"><div class="il">Personal email</div><div class="iv lnk">rohan.m@gmail.com</div></div>
+            <div class="ir"><div class="il">Phone</div><div class="iv">+91 98765 43210</div></div>
+            <div class="ir" style="grid-column:1/-1;"><div class="il">Address</div><div class="iv">B-204 Shyamal Cross Rd, Satellite, Ahmedabad 380015</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-briefcase" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--teal)" aria-hidden="true"></i>Employment details</div><div class="ca">Edit</div></div>
+          <div class="ig">
+            <div class="ir"><div class="il">Employee ID</div><div class="iv">EMP-0042</div></div>
+            <div class="ir"><div class="il">Designation</div><div class="iv">Sr. Frontend Developer</div></div>
+            <div class="ir"><div class="il">Department</div><div class="iv">Technology</div></div>
+            <div class="ir"><div class="il">Reports to</div><div class="iv">Aditi Sharma</div></div>
+            <div class="ir"><div class="il">Date of joining</div><div class="iv">10 Feb 2023</div></div>
+            <div class="ir"><div class="il">Work email</div><div class="iv lnk">rohan@saeculumsolutions.in</div></div>
+            <div class="ir"><div class="il">Type</div><div class="iv"><span class="pill pill-g">Full-time</span></div></div>
+            <div class="ir"><div class="il">Probation</div><div class="iv"><span class="pill pill-b">Confirmed</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 2 — Skills + Timeline -->
+      <div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-code" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--saffron)" aria-hidden="true"></i>Skills & competencies</div></div>
+          <div class="sr"><div class="st"><div class="sn">React / Next.js</div><div class="sp">92%</div></div><div class="sb"><div class="sf" style="width:92%;background:var(--saffron);"></div></div></div>
+          <div class="sr"><div class="st"><div class="sn">TypeScript</div><div class="sp">85%</div></div><div class="sb"><div class="sf" style="width:85%;background:var(--teal-mid);"></div></div></div>
+          <div class="sr"><div class="st"><div class="sn">UI/UX Collaboration</div><div class="sp">78%</div></div><div class="sb"><div class="sf" style="width:78%;background:#EF9F27;"></div></div></div>
+          <div class="sr"><div class="st"><div class="sn">Node.js / APIs</div><div class="sp">65%</div></div><div class="sb"><div class="sf" style="width:65%;background:var(--info);"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-timeline" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--teal)" aria-hidden="true"></i>Recent activity</div></div>
+          <div class="tli"><div class="tl-ic s"><i class="ti ti-star" aria-hidden="true"></i></div><div><div class="tl-tt">Performance review submitted</div><div class="tl-dd">Rating 4.6/5 by Aditi Sharma</div><div class="tl-dt">8 May 2026</div></div></div>
+          <div class="tli"><div class="tl-ic w"><i class="ti ti-plane" aria-hidden="true"></i></div><div><div class="tl-tt">Leave approved — 1 day</div><div class="tl-dd">Annual leave</div><div class="tl-dt">2 May 2026</div></div></div>
+          <div class="tli"><div class="tl-ic t"><i class="ti ti-coin" aria-hidden="true"></i></div><div><div class="tl-tt">Salary credited</div><div class="tl-dd">April 2026 payroll</div><div class="tl-dt">30 Apr 2026</div></div></div>
+          <div class="tli"><div class="tl-ic g"><i class="ti ti-confetti" aria-hidden="true"></i></div><div><div class="tl-tt">3-year work anniversary</div><div class="tl-dd">Wished by HR team</div><div class="tl-dt">10 Feb 2026</div></div></div>
+        </div>
+      </div>
+
+      <!-- COL 3 — Right panel -->
+      <div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-calendar" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--saffron)" aria-hidden="true"></i>Attendance — May</div><div class="ca">Full log →</div></div>
+          <div style="font-size:10px;color:var(--ink-muted);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;margin-bottom:3px;">
+            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+          </div>
+          <div class="hm">
+            <div class="hmc h"></div><div class="hmc h"></div><div class="hmc h"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc h"></div><div class="hmc h"></div>
+            <div class="hmc p"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc l"></div><div class="hmc h"></div><div class="hmc h"></div>
+            <div class="hmc p"></div><div class="hmc p"></div><div class="hmc a"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc h"></div><div class="hmc h"></div>
+            <div class="hmc p"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc p"></div><div class="hmc h"></div><div class="hmc h"></div>
+          </div>
+          <div class="hml">
+            <div class="hmleg"><div class="hmdot" style="background:var(--teal-mid)"></div>Present</div>
+            <div class="hmleg"><div class="hmdot" style="background:#EF9F27"></div>Late</div>
+            <div class="hmleg"><div class="hmdot" style="background:#F09595"></div>Absent</div>
+            <div class="hmleg"><div class="hmdot" style="background:var(--sand-dark)"></div>Holiday</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-phone" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--teal)" aria-hidden="true"></i>Quick contact</div></div>
+          <div class="dr"><div class="di" style="background:var(--info-bg);color:var(--info);"><i class="ti ti-mail" aria-hidden="true"></i></div><div><div class="dn lnk iv" style="font-size:11px;color:var(--info);">rohan@saeculumsolutions.in</div><div class="dm">Work email</div></div></div>
+          <div class="dr"><div class="di" style="background:var(--success-bg);color:var(--success);"><i class="ti ti-brand-whatsapp" aria-hidden="true"></i></div><div><div class="dn iv" style="font-size:11px;">+91 98765 43210</div><div class="dm">Phone / WhatsApp</div></div></div>
+          <div class="dr"><div class="di"><i class="ti ti-brand-slack" aria-hidden="true"></i></div><div><div class="dn iv" style="font-size:11px;color:var(--info);">@rohan.mehta</div><div class="dm">Google Chat</div></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><i class="ti ti-folder" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--warn)" aria-hidden="true"></i>Documents</div><div class="ca"><i class="ti ti-plus" aria-hidden="true"></i> Upload</div></div>
+          <div class="dr"><div class="di"><i class="ti ti-file-text" aria-hidden="true"></i></div><div style="flex:1"><div class="dn">Offer Letter</div><div class="dm">Feb 2023</div></div><span class="ds ok">Verified</span></div>
+          <div class="dr"><div class="di"><i class="ti ti-file-text" aria-hidden="true"></i></div><div style="flex:1"><div class="dn">Aadhaar Card</div><div class="dm">Uploaded</div></div><span class="ds ok">Verified</span></div>
+          <div class="dr"><div class="di"><i class="ti ti-file-text" aria-hidden="true"></i></div><div style="flex:1"><div class="dn">PAN Card</div><div class="dm">Uploaded</div></div><span class="ds ok">Verified</span></div>
+          <div class="dr"><div class="di" style="background:var(--warn-bg);color:var(--warn);"><i class="ti ti-file-alert" aria-hidden="true"></i></div><div style="flex:1"><div class="dn">Appraisal Letter</div><div class="dm">Due May 2026</div></div><span class="ds pend">Pending</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

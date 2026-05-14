@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { state_arr, s_a } from '../utils/locationData';
 
 const Signup = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sameAsCurrent, setSameAsCurrent] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -25,7 +27,7 @@ const Signup = () => {
     family: {
       fatherName: '',
       motherName: '',
-      married: false,
+      maritalStatus: 'Single',
       spouseName: '',
       marriageDate: ''
     },
@@ -61,39 +63,39 @@ const Signup = () => {
 
   const handleChange = (section, field, value) => {
     if (section === 'root') {
-      setFormData({ ...formData, [field]: value });
+      setFormData(prev => ({ ...prev, [field]: value }));
     } else if (section === 'address') {
       const [addressType, addressField] = field.split('.');
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         address: {
-          ...formData.address,
+          ...prev.address,
           [addressType]: {
-            ...formData.address[addressType],
+            ...prev.address[addressType],
             [addressField]: value
           }
         }
-      });
+      }));
     } else if (section === 'emergency') {
       const [contactNum, contactField] = field.split('.');
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         emergency: {
-          ...formData.emergency,
+          ...prev.emergency,
           [contactNum]: {
-            ...formData.emergency[contactNum],
+            ...prev.emergency[contactNum],
             [contactField]: value
           }
         }
-      });
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         [section]: {
-          ...formData[section],
+          ...prev[section],
           [field]: value
         }
-      });
+      }));
     }
   };
 
@@ -119,7 +121,11 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      await register(formData);
+      let finalData = { ...formData };
+      if (sameAsCurrent) {
+        finalData.address.permanentAddress = { ...finalData.address.currentAddress };
+      }
+      await register(finalData);
       navigate('/waiting');
     } catch (err) {
       const validationErrors = err.response?.data?.errors;
@@ -261,18 +267,22 @@ const Signup = () => {
         </div>
 
         <div className="form-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={formData.family.married}
-              onChange={(e) => handleChange('family', 'married', e.target.checked)}
-            />
-            {' '}Married
-          </label>
+          <label>Marital Status *</label>
+          <select
+            value={formData.family.maritalStatus}
+            onChange={(e) => handleChange('family', 'maritalStatus', e.target.value)}
+            required
+          >
+            <option value="Single">Single</option>
+            <option value="Married">Married</option>
+            <option value="Widowed">Widowed</option>
+            <option value="Divorced">Divorced</option>
+            <option value="Separated">Separated</option>
+          </select>
         </div>
       </div>
 
-      {formData.family.married && (
+      {formData.family.maritalStatus === 'Married' && (
         <div className="grid-2">
           <div className="form-group">
             <label>Spouse Name</label>
@@ -296,8 +306,16 @@ const Signup = () => {
     </div>
   );
 
+  const getCityOptions = (stateName) => {
+    const stateIndex = state_arr.indexOf(stateName) + 1;
+    if (stateIndex > 0 && s_a[stateIndex]) {
+      return s_a[stateIndex].split('|').map(c => c.trim()).filter(c => c);
+    }
+    return [];
+  };
+
   const renderStep3 = () => (
-    <div>
+    <div style={{ overflow: 'visible' }}>
       <h3>Step 3: Address & Emergency Contacts</h3>
       
       <h4>Current Address</h4>
@@ -313,23 +331,35 @@ const Signup = () => {
         </div>
 
         <div className="form-group">
-          <label>City *</label>
-          <input
-            type="text"
-            value={formData.address.currentAddress.city}
-            onChange={(e) => handleChange('address', 'currentAddress.city', e.target.value)}
+          <label>State *</label>
+          <select
+            value={formData.address.currentAddress.state}
+            onChange={(e) => {
+              handleChange('address', 'currentAddress.state', e.target.value);
+              handleChange('address', 'currentAddress.city', ''); // Reset city on state change
+            }}
             required
-          />
+          >
+            <option value="">Search State...</option>
+            {state_arr.map((state, index) => (
+              <option key={index} value={state}>{state}</option>
+            ))}
+          </select>
         </div>
 
         <div className="form-group">
-          <label>State *</label>
-          <input
-            type="text"
-            value={formData.address.currentAddress.state}
-            onChange={(e) => handleChange('address', 'currentAddress.state', e.target.value)}
+          <label>City *</label>
+          <select
+            value={formData.address.currentAddress.city}
+            onChange={(e) => handleChange('address', 'currentAddress.city', e.target.value)}
             required
-          />
+            disabled={!formData.address.currentAddress.state}
+          >
+            <option value="">Search City...</option>
+            {getCityOptions(formData.address.currentAddress.state).map((city, index) => (
+              <option key={index} value={city}>{city}</option>
+            ))}
+          </select>
         </div>
 
         <div className="form-group">
@@ -343,48 +373,86 @@ const Signup = () => {
         </div>
       </div>
 
-      <h4>Permanent Address</h4>
-      <div className="grid-2">
-        <div className="form-group">
-          <label>Street *</label>
+      <div style={{ margin: '16px 0' }}>
+        <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input
-            type="text"
-            value={formData.address.permanentAddress.street}
-            onChange={(e) => handleChange('address', 'permanentAddress.street', e.target.value)}
-            required
+            type="checkbox"
+            checked={sameAsCurrent}
+            onChange={(e) => {
+              setSameAsCurrent(e.target.checked);
+              if (e.target.checked) {
+                setFormData(prev => ({
+                  ...prev,
+                  address: {
+                    ...prev.address,
+                    permanentAddress: { ...prev.address.currentAddress }
+                  }
+                }));
+              }
+            }}
           />
-        </div>
-
-        <div className="form-group">
-          <label>City *</label>
-          <input
-            type="text"
-            value={formData.address.permanentAddress.city}
-            onChange={(e) => handleChange('address', 'permanentAddress.city', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>State *</label>
-          <input
-            type="text"
-            value={formData.address.permanentAddress.state}
-            onChange={(e) => handleChange('address', 'permanentAddress.state', e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Pincode *</label>
-          <input
-            type="text"
-            value={formData.address.permanentAddress.pincode}
-            onChange={(e) => handleChange('address', 'permanentAddress.pincode', e.target.value)}
-            required
-          />
-        </div>
+          Permanent Address is the same as Current Address
+        </label>
       </div>
+
+      {!sameAsCurrent && (
+        <>
+          <h4>Permanent Address</h4>
+          <div className="grid-2">
+            <div className="form-group">
+              <label>Street *</label>
+              <input
+                type="text"
+                value={formData.address.permanentAddress.street}
+                onChange={(e) => handleChange('address', 'permanentAddress.street', e.target.value)}
+                required={!sameAsCurrent}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>State *</label>
+              <select
+                value={formData.address.permanentAddress.state}
+                onChange={(e) => {
+                  handleChange('address', 'permanentAddress.state', e.target.value);
+                  handleChange('address', 'permanentAddress.city', ''); // Reset city on state change
+                }}
+                required={!sameAsCurrent}
+              >
+                <option value="">Search State...</option>
+                {state_arr.map((state, index) => (
+                  <option key={index} value={state}>{state}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>City *</label>
+              <select
+                value={formData.address.permanentAddress.city}
+                onChange={(e) => handleChange('address', 'permanentAddress.city', e.target.value)}
+                required={!sameAsCurrent}
+                disabled={!formData.address.permanentAddress.state}
+              >
+                <option value="">Search City...</option>
+                {getCityOptions(formData.address.permanentAddress.state).map((city, index) => (
+                  <option key={index} value={city}>{city}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Pincode *</label>
+              <input
+                type="text"
+                value={formData.address.permanentAddress.pincode}
+                onChange={(e) => handleChange('address', 'permanentAddress.pincode', e.target.value)}
+                required={!sameAsCurrent}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       <h4>Emergency Contact 1 *</h4>
       <div className="grid-2">
@@ -400,12 +468,20 @@ const Signup = () => {
 
         <div className="form-group">
           <label>Relationship *</label>
-          <input
-            type="text"
+          <select
             value={formData.emergency.emergencyContact1.relationship}
             onChange={(e) => handleChange('emergency', 'emergencyContact1.relationship', e.target.value)}
             required
-          />
+          >
+            <option value="">Select Relationship</option>
+            <option value="Father">Father</option>
+            <option value="Mother">Mother</option>
+            <option value="Spouse">Spouse</option>
+            <option value="Brother">Brother</option>
+            <option value="Sister">Sister</option>
+            <option value="Friend">Friend</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         <div className="form-group">
@@ -432,11 +508,19 @@ const Signup = () => {
 
         <div className="form-group">
           <label>Relationship</label>
-          <input
-            type="text"
+          <select
             value={formData.emergency.emergencyContact2.relationship}
             onChange={(e) => handleChange('emergency', 'emergencyContact2.relationship', e.target.value)}
-          />
+          >
+            <option value="">Select Relationship</option>
+            <option value="Father">Father</option>
+            <option value="Mother">Mother</option>
+            <option value="Spouse">Spouse</option>
+            <option value="Brother">Brother</option>
+            <option value="Sister">Sister</option>
+            <option value="Friend">Friend</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         <div className="form-group">
@@ -469,8 +553,8 @@ const Signup = () => {
         <h4>Family Information</h4>
         <p><strong>Father:</strong> {formData.family.fatherName}</p>
         <p><strong>Mother:</strong> {formData.family.motherName}</p>
-        <p><strong>Married:</strong> {formData.family.married ? 'Yes' : 'No'}</p>
-        {formData.family.married && (
+        <p><strong>Marital Status:</strong> {formData.family.maritalStatus}</p>
+        {formData.family.maritalStatus === 'Married' && (
           <>
             <p><strong>Spouse:</strong> {formData.family.spouseName}</p>
             <p><strong>Marriage Date:</strong> {formData.family.marriageDate}</p>

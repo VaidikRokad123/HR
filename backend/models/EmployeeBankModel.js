@@ -10,24 +10,37 @@ const employeeBankSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  companyOpensBank: {
+    type: Boolean,
+    default: false
+  },
+  panNumber: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
+  aadharNumber: {
+    type: String,
+    trim: true
+  },
+  permissionToUsePanAadhar: {
+    type: Boolean,
+    default: false
+  },
   bankName: {
     type: String,
-    required: true,
     trim: true
   },
   branch: {
     type: String,
-    required: true,
     trim: true
   },
   personalAccountNumber: {
     type: String,
-    required: true,
     trim: true
   },
   personalIfsc: {
     type: String,
-    required: true,
     uppercase: true,
     trim: true
   },

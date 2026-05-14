@@ -1,4 +1,11 @@
+node_modules
 node_modules/
 .env
 .DS_Store
 *.log
+
+
+company
+generated
+company/
+generated/

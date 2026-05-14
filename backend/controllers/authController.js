@@ -44,6 +44,7 @@ export const register = async (req, res) => {
     // Create personal details
     const employeePersonal = new EmployeePersonalModel({
       userId: user._id,
+      personalEmail: email,
       ...personal
     });
     await employeePersonal.save();
