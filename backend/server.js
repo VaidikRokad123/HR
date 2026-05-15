@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import hrRoutes from './routes/hrRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
 import { initializeCounter } from './utils/empCodeUtils.js';
 import { setupRabbitMQ } from './queues/setup.js';
 import { startEmailConsumer } from './queues/consumers/emailConsumer.js';
@@ -39,12 +40,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use('/GeneratedDocuments', express.static('GeneratedDocuments'));
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/documents', documentRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

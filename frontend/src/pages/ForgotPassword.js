@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import OtpInput from '../components/OtpInput';
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -10,7 +11,7 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  
+
   const navigate = useNavigate();
 
   const handleRequestOtp = async (e) => {
@@ -18,10 +19,10 @@ const ForgotPassword = () => {
     setLoading(true);
     setError('');
     setMessage('');
-    
+
     try {
       const res = await axios.post('/auth/forgot-password', { email });
-      setMessage(res.data.message || 'OTP sent successfully.');
+      setMessage(res.data.message || 'OTP sent to your registered personal email.');
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send OTP.');
@@ -32,20 +33,22 @@ const ForgotPassword = () => {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    if (otp.length !== 6) {
+      setError('Please enter the full 6-digit verification code.');
+      return;
+    }
     setLoading(true);
     setError('');
     setMessage('');
-    
+
     try {
-      const res = await axios.post('/auth/reset-password', { 
-        email, 
-        otp, 
-        newPassword 
+      const res = await axios.post('/auth/reset-password', {
+        email,
+        otp,
+        newPassword,
       });
-      setMessage(res.data.message || 'Password reset successful.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+      setMessage(res.data.message || 'Password reset successful. Redirecting to login…');
+      setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reset password.');
     } finally {
@@ -56,79 +59,92 @@ const ForgotPassword = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Reset Password</h2>
-        
-        {error && <div className="alert alert-error">{error}</div>}
-        {message && <div className="alert alert-success">{message}</div>}
-        
         {step === 1 ? (
-          <form onSubmit={handleRequestOtp}>
-            <p style={{ marginBottom: '20px', color: '#000000', fontSize: '14px' }}>
-              Enter your company email address. We will send an OTP to your registered personal email.
+          <>
+            <h1 className="auth-title">Reset password</h1>
+            <p className="auth-subtitle">
+              Enter your company email. We will send a verification code to your registered personal email.
             </p>
-            <div className="form-group">
-              <label>Company Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Enter your work email"
-              />
-            </div>
 
-            <button 
-              type="submit" 
-              className="btn btn-primary" 
-              style={{ width: '100%', marginTop: '10px' }}
-              disabled={loading}
-            >
-              {loading ? 'Sending OTP...' : 'Request OTP'}
-            </button>
-          </form>
+            {error && <div className="alert alert-error">{error}</div>}
+            {message && <div className="alert alert-success">{message}</div>}
+
+            <form onSubmit={handleRequestOtp}>
+              <div className="form-group">
+                <label htmlFor="forgot-email">Email</label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Enter your work email"
+                  autoComplete="email"
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+                {loading ? 'Sending…' : 'Send verification code'}
+              </button>
+            </form>
+          </>
         ) : (
-          <form onSubmit={handleResetPassword}>
-            <p style={{ marginBottom: '20px', color: '#000000', fontSize: '14px' }}>
-              Enter the 6-digit OTP sent to your personal email and your new password.
+          <>
+            <h1 className="auth-title">Enter Verification Code</h1>
+            <p className="auth-subtitle">
+              Code sent for <strong>{email}</strong>. Enter all 6 digits, then set a new password.
             </p>
-            <div className="form-group">
-              <label>OTP</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                maxLength="6"
-                placeholder="Enter 6-digit OTP"
-                style={{ letterSpacing: '2px', textAlign: 'center', fontSize: '18px' }}
-              />
-            </div>
-            <div className="form-group">
-              <label>New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength="6"
-                placeholder="Enter new password"
-              />
-            </div>
 
-            <button 
-              type="submit" 
-              className="btn btn-primary" 
-              style={{ width: '100%', marginTop: '10px' }}
-              disabled={loading}
-            >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </form>
+            {error && <div className="alert alert-error">{error}</div>}
+            {message && <div className="alert alert-success">{message}</div>}
+
+            <form onSubmit={handleResetPassword}>
+              <div className="otp-section">
+                <OtpInput value={otp} onChange={setOtp} disabled={loading} autoFocus />
+                <p className="otp-hint">
+                  You will be redirected to login after your password is reset successfully.
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="new-password">New password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="Enter new password"
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+                {loading ? 'Resetting…' : 'Reset password'}
+              </button>
+            </form>
+
+            <p className="auth-footer" style={{ marginTop: 14 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ width: '100%' }}
+                onClick={() => {
+                  setStep(1);
+                  setOtp('');
+                  setError('');
+                }}
+              >
+                Use a different email
+              </button>
+            </p>
+          </>
         )}
 
-        <p style={{ marginTop: '20px', textAlign: 'center' }}>
-          Remember your password? <Link to="/login">Back to Login</Link>
-        </p>
+        <div className="auth-footer">
+          <Link to="/login">Back to login</Link>
+        </div>
       </div>
     </div>
   );

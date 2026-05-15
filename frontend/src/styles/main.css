@@ -793,36 +793,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
   gap: var(--space-sm);
 }
 
-/* ── Auth ── */
-.auth-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg);
-  background: var(--color-bg);
-}
-
-.auth-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 28px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.auth-card::before {
-  display: none;
-}
-
-.auth-card h2 {
-  text-align: center;
-  margin-bottom: var(--space-lg);
-  color: var(--color-text);
-  font-size: var(--font-xl);
-  font-weight: 600;
-}
+/* Auth screens — see styles/auth.css */
 
 /* ── Modal overlay (shared) ── */
 .modal-overlay {

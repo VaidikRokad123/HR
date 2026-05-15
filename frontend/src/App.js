@@ -12,6 +12,8 @@ import HRPendingApprovals from './pages/HRPendingApprovals';
 import HREmployeeDetail from './pages/HREmployeeDetail';
 import HRAllEmployees from './pages/HRAllEmployees';
 import HRUpcomingEvents from './pages/HRUpcomingEvents';
+import HRDocuments from './pages/HRDocuments';
+import OfferLetterAdvancedEditor from './pages/OfferLetterAdvancedEditor';
 import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
@@ -84,6 +86,22 @@ function AppShell() {
                   <HRUpcomingEvents />
                 </PrivateRoute>
               } 
+            />
+            <Route
+              path="/hr/documents"
+              element={
+                <PrivateRoute role="hr">
+                  <HRDocuments />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hr/documents/editor"
+              element={
+                <PrivateRoute role="hr">
+                  <OfferLetterAdvancedEditor />
+                </PrivateRoute>
+              }
             />
             
             <Route path="/" element={<Navigate to="/login" />} />
