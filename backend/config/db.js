@@ -3,14 +3,21 @@ import mongoose from 'mongoose';
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
       useUnifiedTopology: true,
+      useNewUrlParser: true,
       dbName: process.env.MONGODB_DB_NAME
     });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    console.log(`Database: ${conn.connection.name}`);
+
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    console.error('❌ MongoDB Connection Error:');
+    // Specifically check for authentication error like "bad auth"
+    if (error.name === 'MongoServerError' && error.code === 8000) {
+      console.error('   Authentication failed. Please check your MONGODB_URI in the .env file to ensure the username and password are correct.');
+    } else {
+      console.error(`   ${error.message}`);
+    }
     process.exit(1);
   }
 };

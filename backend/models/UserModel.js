@@ -28,6 +28,12 @@ const userSchema = new mongoose.Schema({
     enum: ['pending_hr', 'approved', 'rejected'],
     default: 'pending_hr'
   },
+  resetPasswordOtp: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
+  },
   createdAt: {
     type: Date,
     default: Date.now

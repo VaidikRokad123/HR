@@ -19,6 +19,7 @@ const EmployeeDashboard = () => {
       setEmployeeData(response.data);
       setFormData(response.data);
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setError('Failed to load employee data');
     } finally {
       setLoading(false);
@@ -35,6 +36,7 @@ const EmployeeDashboard = () => {
       fetchEmployeeData();
       setEditMode(null);
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to update details');
     }
   };

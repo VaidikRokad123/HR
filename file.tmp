@@ -297,6 +297,18 @@ Content-Type: application/json
 }
 ```
 
+#### Edit Profile
+```http
+PUT /api/employee/edit
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "module": "personal|family|address|emergency",
+  "data": { /* module-specific fields */ }
+}
+```
+
 ### HR Routes (`/api/hr`)
 
 #### Get Pending Employees

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 import './EmployeeDashboard.css';
 
@@ -46,6 +47,7 @@ const employmentTypeOptions = [
 const HREmployeeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +66,10 @@ const HREmployeeDetail = () => {
     probationDuration: ''
   });
 
+  // Check if current user is Jr HR (view-only mode)
+  const isJrHR = currentUser?.jobTitle === 'Jr Human Resource Executive';
+  const isViewOnly = isJrHR;
+
   useEffect(() => {
     fetchEmployeeData();
   }, [id]);
@@ -74,6 +80,7 @@ const HREmployeeDetail = () => {
       setEmployeeData(response.data);
       setFormData(response.data);
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setError('Failed to load employee data');
     } finally {
       setLoading(false);
@@ -81,6 +88,11 @@ const HREmployeeDetail = () => {
   };
 
   const handleApprove = async () => {
+    if (isViewOnly) {
+      alert('You do not have permission to approve employees. This action requires Senior HR privileges.');
+      return;
+    }
+
     if (!professionalData.dateJoined || !professionalData.department ||
       !professionalData.jobTitle || !professionalData.employmentType || !professionalData.workEmail) {
       alert('Please fill all required professional details before approving');
@@ -97,11 +109,17 @@ const HREmployeeDetail = () => {
       // Redirect to the pending approvals page
       navigate('/hr/pending', { replace: true });
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to approve employee');
     }
   };
 
   const handleReject = async () => {
+    if (isViewOnly) {
+      alert('You do not have permission to reject employees. This action requires Senior HR privileges.');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to reject this employee? This action cannot be undone.')) {
       return;
     }
@@ -112,11 +130,17 @@ const HREmployeeDetail = () => {
       // Redirect to the pending approvals page
       navigate('/hr/pending', { replace: true });
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to reject employee');
     }
   };
 
   const handleEdit = async (module) => {
+    if (isViewOnly) {
+      alert('You do not have permission to edit employee details. This action requires Senior HR privileges.');
+      return;
+    }
+
     try {
       await axios.put(`/hr/employee/${id}/edit`, {
         module,
@@ -126,6 +150,7 @@ const HREmployeeDetail = () => {
       fetchEmployeeData();
       setEditMode(null);
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to update details');
     }
   };

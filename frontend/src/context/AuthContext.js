@@ -41,6 +41,7 @@ export const AuthProvider = ({ children }) => {
           const statusResponse = await axios.get('/employee/waiting-status');
           userData.profileComplete = statusResponse.data.profileComplete;
         } catch (error) {
+      console.error("❌ Caught Error:", error);
           userData.profileComplete = false;
         }
       } else if (userData.role === 'hr') {
@@ -74,6 +75,7 @@ export const AuthProvider = ({ children }) => {
         const statusResponse = await axios.get('/employee/waiting-status');
         userData.profileComplete = statusResponse.data.profileComplete;
       } catch (error) {
+      console.error("❌ Caught Error:", error);
         userData.profileComplete = false;
       }
     } else if (userData.role === 'hr') {

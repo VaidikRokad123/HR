@@ -23,6 +23,7 @@ const linkedinUrlValidator = body('linkedinUrl')
       }
       return true;
     } catch (error) {
+      console.error("❌ Caught Error:", error);
       throw new Error(error.message || 'Invalid LinkedIn URL format');
     }
   });

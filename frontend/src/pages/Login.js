@@ -28,22 +28,41 @@ const Login = () => {
     setError('');
     setLoading(true);
 
+    console.log('🔐 Login attempt');
+    console.log('📧 Email:', email);
+
     try {
       const user = await login(email, password);
+      
+      console.log('✅ Login successful');
+      console.log('👤 User:', user);
       
       // STRICT WORKFLOW: Redirect based on user status
       if (user.status === 'pending_hr') {
         // Pending users go to waiting page ONLY
+        console.log('➡️ Redirecting to waiting page');
         navigate('/waiting', { replace: true });
       } else if (user.status === 'approved' && !user.profileComplete) {
         // Approved but incomplete profile - go to complete profile ONLY
+        console.log('➡️ Redirecting to complete profile');
         navigate('/employee/complete-profile', { replace: true });
       } else {
         // Fully completed users go to dashboard
+        console.log('➡️ Redirecting to dashboard');
         navigate(user.role === 'hr' ? '/hr/pending' : '/employee/dashboard', { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      console.error('═══════════════════════════════════════════════════');
+      console.error('❌ LOGIN ERROR');
+      console.error('═══════════════════════════════════════════════════');
+      console.error('Error object:', err);
+      console.error('Error message:', err.message);
+      console.error('Error response:', err.response);
+      console.error('Error response data:', err.response?.data);
+      console.error('Error response status:', err.response?.status);
+      console.error('═══════════════════════════════════════════════════');
+      
+      setError(err.response?.data?.message || 'Login failed. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -93,9 +112,14 @@ const Login = () => {
           </button>
         </form>
 
-        <p style={{ marginTop: '16px', textAlign: 'center' }}>
-          Don't have an account? <Link to="/signup">Sign up</Link>
-        </p>
+        <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px' }}>
+          <p style={{ margin: 0 }}>
+            Don't have an account? <Link to="/signup">Sign up</Link>
+          </p>
+          <p style={{ margin: 0 }}>
+            <Link to="/forgot-password" style={{ color: 'var(--saffron)' }}>Forgot Password?</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

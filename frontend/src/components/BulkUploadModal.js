@@ -170,6 +170,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             try {
               return new Date(dateVal).toISOString().split('T')[0];
             } catch (err) {
+      console.error("❌ Caught Error:", err);
               return dateVal;
             }
           };
@@ -295,6 +296,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           setActiveTab('review');
         }
       } catch (err) {
+      console.error("❌ Caught Error:", err);
         setError('Error parsing Excel file.');
         setLoading(false);
       }

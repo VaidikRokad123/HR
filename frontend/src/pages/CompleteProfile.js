@@ -72,6 +72,7 @@ const CompleteProfile = () => {
       
       return null;
     } catch (e) {
+      console.error("❌ Caught Error:", e);
       return 'Please provide a valid URL starting with https://';
     }
   };
@@ -147,6 +148,7 @@ const CompleteProfile = () => {
       // Navigate to dashboard
       navigate('/employee/dashboard', { replace: true });
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setError(err.response?.data?.message || 'Failed to complete profile');
     } finally {
       setLoading(false);

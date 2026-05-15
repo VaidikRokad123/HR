@@ -38,6 +38,7 @@ const HRPendingApprovals = () => {
       setPendingEmployees(response.data);
       setError('');
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setError('Failed to load pending employees');
     } finally {
       setLoading(false);
@@ -51,6 +52,7 @@ const HRPendingApprovals = () => {
       setPendingPayrolls(response.data);
       setError('');
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setError('Failed to load pending payrolls');
     } finally {
       setLoading(false);
@@ -93,6 +95,7 @@ const HRPendingApprovals = () => {
       setShowPayrollModal(false);
       fetchPendingPayrolls(); // Refresh list
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to submit payroll details');
     } finally {
       setPayrollSubmitting(false);

@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, logout } from '../controllers/authController.js';
+import { register, login, getMe, logout, forgotPassword, resetPassword } from '../controllers/authController.js';
 import { auth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -40,5 +40,21 @@ router.get('/me', auth, getMe);
 // @desc    Logout user
 // @access  Private
 router.post('/logout', auth, logout);
+
+// @route   POST /api/auth/forgot-password
+// @desc    Request password reset OTP
+// @access  Public
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid company email is required')
+], forgotPassword);
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset password using OTP
+// @access  Public
+router.post('/reset-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid company email is required'),
+  body('otp').isLength({ min: 6, max: 6 }).withMessage('Valid 6-digit OTP is required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], resetPassword);
 
 export default router;

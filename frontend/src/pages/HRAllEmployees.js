@@ -21,6 +21,7 @@ const HRAllEmployees = () => {
       const response = await axios.get('/hr/all-employees');
       setEmployees(response.data);
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setError('Failed to load employees');
     } finally {
       setLoading(false);

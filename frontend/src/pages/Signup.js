@@ -236,9 +236,11 @@ const Signup = () => {
         await login(formData.email, formData.password);
         navigate('/waiting', { replace: true });
       } catch (loginErr) {
+      console.error("❌ Caught Error:", loginErr);
         navigate('/login');
       }
     } catch (err) {
+      console.error("❌ Caught Error:", err);
       setSubmitError(err.response?.data?.message || 'Failed to register employee');
     } finally {
       setLoading(false);

@@ -11,7 +11,7 @@ import {
   addPayrollDetails,
   bulkUploadEmployees
 } from '../controllers/hrController.js';
-import { auth, hrOnly } from '../middleware/authMiddleware.js';
+import { auth, hrOnly, hrSeniorOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -27,10 +27,10 @@ router.get('/pending-payrolls', auth, hrOnly, getPendingPayrolls);
 
 // @route   POST /api/hr/payroll/:id
 // @desc    Add payroll details for employee
-// @access  Private (HR)
+// @access  Private (Senior HR Only)
 router.post('/payroll/:id', [
   auth,
-  hrOnly,
+  hrSeniorOnly,
   body('ctc').isNumeric(),
   body('gross').isNumeric()
 ], addPayrollDetails);
@@ -42,10 +42,10 @@ router.get('/employee/:id', auth, hrOnly, getEmployeeById);
 
 // @route   PUT /api/hr/employee/:id/approve
 // @desc    Approve employee and assign professional details
-// @access  Private (HR)
+// @access  Private (Senior HR Only)
 router.put('/employee/:id/approve', [
   auth,
-  hrOnly,
+  hrSeniorOnly,
   body('dateJoined').isISO8601(),
   body('department').notEmpty(),
   body('jobTitle').notEmpty(),
@@ -59,13 +59,13 @@ router.put('/employee/:id/approve', [
 
 // @route   PUT /api/hr/employee/:id/reject
 // @desc    Reject employee registration
-// @access  Private (HR)
-router.put('/employee/:id/reject', auth, hrOnly, rejectEmployee);
+// @access  Private (Senior HR Only)
+router.put('/employee/:id/reject', auth, hrSeniorOnly, rejectEmployee);
 
 // @route   PUT /api/hr/employee/:id/edit
 // @desc    Edit employee details (any module)
-// @access  Private (HR)
-router.put('/employee/:id/edit', auth, hrOnly, editEmployee);
+// @access  Private (Senior HR Only)
+router.put('/employee/:id/edit', auth, hrSeniorOnly, editEmployee);
 
 // @route   GET /api/hr/all-employees
 // @desc    Get all approved employees
@@ -74,7 +74,7 @@ router.get('/all-employees', auth, hrOnly, getAllEmployees);
 
 // @route   POST /api/hr/bulk-upload
 // @desc    Bulk upload employees from excel data
-// @access  Private (HR)
-router.post('/bulk-upload', auth, hrOnly, bulkUploadEmployees);
+// @access  Private (Senior HR Only)
+router.post('/bulk-upload', auth, hrSeniorOnly, bulkUploadEmployees);
 
 export default router;

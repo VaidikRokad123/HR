@@ -38,6 +38,7 @@ const seedHR = async () => {
       console.log('✅ HR user already exists!');
       console.log('Email: vaidik@saeculum.com');
       console.log('Employee Code: ' + existingHR.emp_code);
+      
       console.log('\n📊 Database Status:');
       console.log('- HR user: ✓');
       console.log('- Counter initialized: ✓');
