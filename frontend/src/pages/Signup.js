@@ -236,11 +236,9 @@ const Signup = () => {
         await login(formData.email, formData.password);
         navigate('/waiting', { replace: true });
       } catch (loginErr) {
-      console.error("❌ Caught Error:", loginErr);
         navigate('/login');
       }
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       setSubmitError(err.response?.data?.message || 'Failed to register employee');
     } finally {
       setLoading(false);
@@ -275,7 +273,7 @@ const Signup = () => {
                 width: '34px', height: '34px', borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: step >= s.num ? 'var(--saffron)' : '#fff',
-                color: step >= s.num ? '#fff' : '#666',
+                color: step >= s.num ? '#fff' : '#000000',
                 fontWeight: 'bold', marginBottom: '8px',
                 border: `2px solid ${step >= s.num ? 'var(--saffron)' : 'var(--border, #ccc)'}`,
                 transition: 'all 0.3s ease'
@@ -285,7 +283,7 @@ const Signup = () => {
               <div style={{
                 fontSize: '13px',
                 fontWeight: step >= s.num ? '600' : 'normal',
-                color: step >= s.num ? 'var(--saffron)' : '#666',
+                color: step >= s.num ? 'var(--saffron)' : '#000000',
                 textAlign: 'center'
               }}>
                 {s.label}

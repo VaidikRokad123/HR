@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
 
 import './EmployeeDashboard.css';
 
@@ -47,13 +46,17 @@ const employmentTypeOptions = [
 const HREmployeeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
 
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editMode, setEditMode] = useState(null); // null or module name being edited
   const [formData, setFormData] = useState({});
+  const [referenceOptions, setReferenceOptions] = useState({
+    departments: departmentOptions,
+    designations: designationOptions,
+    employmentTypes: employmentTypeOptions
+  });
   const [professionalData, setProfessionalData] = useState({
     dateJoined: '',
     department: '',
@@ -66,33 +69,37 @@ const HREmployeeDetail = () => {
     probationDuration: ''
   });
 
-  // Check if current user is Jr HR (view-only mode)
-  const isJrHR = currentUser?.jobTitle === 'Jr Human Resource Executive';
-  const isViewOnly = isJrHR;
+  const fetchReferenceOptions = useCallback(async () => {
+    try {
+      const response = await axios.get('/auth/rbac');
+      setReferenceOptions({
+        departments: response.data.departments || departmentOptions,
+        designations: response.data.designations || designationOptions,
+        employmentTypes: response.data.employmentTypes || employmentTypeOptions
+      });
+    } catch (err) {
+      console.warn('Failed to load RBAC reference options, using defaults.');
+    }
+  }, []);
 
-  useEffect(() => {
-    fetchEmployeeData();
-  }, [id]);
-
-  const fetchEmployeeData = async () => {
+  const fetchEmployeeData = useCallback(async () => {
     try {
       const response = await axios.get(`/hr/employee/${id}`);
       setEmployeeData(response.data);
       setFormData(response.data);
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       setError('Failed to load employee data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchEmployeeData();
+    fetchReferenceOptions();
+  }, [fetchEmployeeData, fetchReferenceOptions]);
 
   const handleApprove = async () => {
-    if (isViewOnly) {
-      alert('You do not have permission to approve employees. This action requires Senior HR privileges.');
-      return;
-    }
-
     if (!professionalData.dateJoined || !professionalData.department ||
       !professionalData.jobTitle || !professionalData.employmentType || !professionalData.workEmail) {
       alert('Please fill all required professional details before approving');
@@ -106,20 +113,13 @@ const HREmployeeDetail = () => {
     try {
       await axios.put(`/hr/employee/${id}/approve`, professionalData);
       alert('Employee approved successfully!');
-      // Redirect to the pending approvals page
-      navigate('/hr/pending', { replace: true });
+      navigate('/hr/pending', { replace: true, state: { activeTab: 'payrolls' } });
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to approve employee');
     }
   };
 
   const handleReject = async () => {
-    if (isViewOnly) {
-      alert('You do not have permission to reject employees. This action requires Senior HR privileges.');
-      return;
-    }
-
     if (!window.confirm('Are you sure you want to reject this employee? This action cannot be undone.')) {
       return;
     }
@@ -130,17 +130,11 @@ const HREmployeeDetail = () => {
       // Redirect to the pending approvals page
       navigate('/hr/pending', { replace: true });
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to reject employee');
     }
   };
 
   const handleEdit = async (module) => {
-    if (isViewOnly) {
-      alert('You do not have permission to edit employee details. This action requires Senior HR privileges.');
-      return;
-    }
-
     try {
       await axios.put(`/hr/employee/${id}/edit`, {
         module,
@@ -150,7 +144,6 @@ const HREmployeeDetail = () => {
       fetchEmployeeData();
       setEditMode(null);
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to update details');
     }
   };
@@ -199,7 +192,7 @@ const HREmployeeDetail = () => {
     );
   }
 
-  const { user, personal, family, address, emergency, professional, bank } = employeeData;
+  const { user, personal, family, address, emergency, professional, bank, payroll } = employeeData;
   const isPending = user.status === 'pending_hr';
 
   return (
@@ -416,7 +409,7 @@ const HREmployeeDetail = () => {
                 </div>
                 {editMode === 'address' ? (
                   <>
-                    <h4 style={{ color: 'orange' }}>Current Address</h4>
+                    <h4 style={{ color: 'var(--primary)' }}>Current Address</h4>
                     <div className="grid-2">
                       <div className="form-group">
                         <label>Street</label>
@@ -460,7 +453,7 @@ const HREmployeeDetail = () => {
                       </div>
                     </div>
 
-                    <h4 style={{ marginTop: '16px', color: 'orange' }}>Permanent Address</h4>
+                    <h4 style={{ marginTop: '16px', color: 'var(--primary)' }}>Permanent Address</h4>
                     <div className="grid-2">
                       <div className="form-group">
                         <label>Street</label>
@@ -506,14 +499,14 @@ const HREmployeeDetail = () => {
                   </>
                 ) : (
                   <>
-                    <h4 style={{ color: 'orange' }}>Current Address</h4>
+                    <h4 style={{ color: 'var(--primary)' }}>Current Address</h4>
                     <p>
                       {address.currentAddress.street}, {address.currentAddress.city},
                       {address.currentAddress.state} - {address.currentAddress.pincode},
                       {address.currentAddress.country}
                     </p>
 
-                    <h4 style={{ marginTop: '16px', color: 'orange' }}>Permanent Address</h4>
+                    <h4 style={{ marginTop: '16px', color: 'var(--primary)' }}>Permanent Address</h4>
                     <p>
                       {address.permanentAddress.street}, {address.permanentAddress.city},
                       {address.permanentAddress.state} - {address.permanentAddress.pincode},
@@ -543,7 +536,7 @@ const HREmployeeDetail = () => {
                 </div>
                 {editMode === 'emergency' ? (
                   <>
-                    <h4 style={{ color: 'orange' }}>Primary Contact</h4>
+                    <h4 style={{ color: 'var(--primary)' }}>Primary Contact</h4>
                     <div className="grid-2">
                       <div className="form-group">
                         <label>Name</label>
@@ -579,7 +572,7 @@ const HREmployeeDetail = () => {
                       </div>
                     </div>
 
-                    <h4 style={{ marginTop: '16px', color: 'orange' }}>Secondary Contact</h4>
+                    <h4 style={{ marginTop: '16px', color: 'var(--primary)' }}>Secondary Contact</h4>
                     <div className="grid-2">
                       <div className="form-group">
                         <label>Name</label>
@@ -617,7 +610,7 @@ const HREmployeeDetail = () => {
                   </>
                 ) : (
                   <>
-                    <h4 style={{ color: 'orange' }}>Primary Contact</h4>
+                    <h4 style={{ color: 'var(--primary)' }}>Primary Contact</h4>
                     <div className="grid-2">
                       <p><strong>Name:</strong> {emergency.emergencyContact1.name}</p>
                       <p><strong>Relationship:</strong> {emergency.emergencyContact1.relationship}</p>
@@ -626,7 +619,7 @@ const HREmployeeDetail = () => {
 
                     {emergency.emergencyContact2 && emergency.emergencyContact2.name && (
                       <>
-                        <h4 style={{ marginTop: '16px', color: 'orange' }}>Secondary Contact</h4>
+                        <h4 style={{ marginTop: '16px', color: 'var(--primary)' }}>Secondary Contact</h4>
                         <div className="grid-2">
                           <p><strong>Name:</strong> {emergency.emergencyContact2.name}</p>
                           <p><strong>Relationship:</strong> {emergency.emergencyContact2.relationship}</p>
@@ -665,7 +658,7 @@ const HREmployeeDetail = () => {
                         required
                       >
                         <option value="">Select Department</option>
-                        {departmentOptions.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                        {referenceOptions.departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
                       </select>
                     </div>
 
@@ -677,7 +670,7 @@ const HREmployeeDetail = () => {
                         required
                       >
                         <option value="">Select Designation</option>
-                        {designationOptions.map(title => <option key={title} value={title}>{title}</option>)}
+                        {referenceOptions.designations.map(title => <option key={title} value={title}>{title}</option>)}
                       </select>
                     </div>
 
@@ -689,7 +682,7 @@ const HREmployeeDetail = () => {
                         required
                       >
                         <option value="">Select Employment Type</option>
-                        {employmentTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
+                        {referenceOptions.employmentTypes.map(type => <option key={type} value={type}>{type}</option>)}
                       </select>
                     </div>
 
@@ -780,7 +773,7 @@ const HREmployeeDetail = () => {
                         onChange={(e) => handleInputChange('professional', 'department', e.target.value)}
                       >
                         <option value="">Select Department</option>
-                        {departmentOptions.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                        {referenceOptions.departments.map(dep => <option key={dep} value={dep}>{dep}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
@@ -790,7 +783,7 @@ const HREmployeeDetail = () => {
                         onChange={(e) => handleInputChange('professional', 'jobTitle', e.target.value)}
                       >
                         <option value="">Select Designation</option>
-                        {designationOptions.map(title => <option key={title} value={title}>{title}</option>)}
+                        {referenceOptions.designations.map(title => <option key={title} value={title}>{title}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
@@ -800,7 +793,7 @@ const HREmployeeDetail = () => {
                         onChange={(e) => handleInputChange('professional', 'employmentType', e.target.value)}
                       >
                         <option value="">Select Employment Type</option>
-                        {employmentTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
+                        {referenceOptions.employmentTypes.map(type => <option key={type} value={type}>{type}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
@@ -1031,6 +1024,20 @@ const HREmployeeDetail = () => {
                     <p><strong>Salary IFSC:</strong> {bank.salaryIfsc || 'Not Set'}</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {!isPending && payroll && (
+              <div className="card">
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px' }}>Payroll Details</h3>
+                <div className="grid-2">
+                  <p><strong>CTC:</strong> {payroll.ctc?.toLocaleString('en-IN') || 'N/A'}</p>
+                  <p><strong>Gross Salary:</strong> {payroll.gross?.toLocaleString('en-IN') || 'N/A'}</p>
+                  <p><strong>PF:</strong> {payroll.pf ? 'Applicable' : 'Not Applicable'}</p>
+                  <p><strong>PT:</strong> {payroll.pt ? 'Applicable' : 'Not Applicable'}</p>
+                  <p><strong>ESIC:</strong> {payroll.esic ? 'Applicable' : 'Not Applicable'}</p>
+                  <p><strong>TDS:</strong> {payroll.tds ? 'Applicable' : 'Not Applicable'}</p>
+                </div>
               </div>
             )}
           </div>

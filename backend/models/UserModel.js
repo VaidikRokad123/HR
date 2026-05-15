@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ROLES } from '../config/rbac.js';
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -14,8 +15,8 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['employee', 'hr'],
-    default: 'employee'
+    enum: Object.values(ROLES),
+    default: ROLES.EMPLOYEE
   },
   emp_code: {
     type: String,

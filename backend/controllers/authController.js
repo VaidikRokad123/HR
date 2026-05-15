@@ -9,6 +9,14 @@ import EmployeeProfessionalModel from '../models/EmployeeProfessionalModel.js';
 import NotificationModel from '../models/NotificationModel.js';
 import { generateToken } from '../utils/jwtUtils.js';
 import { sendPasswordResetEmail } from '../utils/emailUtils.js';
+import {
+  buildUserResponse,
+  DEPARTMENTS,
+  DESIGNATIONS,
+  EMPLOYMENT_TYPES,
+  PERMISSIONS,
+  ROLES
+} from '../config/rbac.js';
 
 // @desc    Employee signup (multi-step final submit)
 // @route   POST /api/auth/register
@@ -36,7 +44,7 @@ export const register = async (req, res) => {
     user = new UserModel({
       email,
       passwordHash,
-      role: 'employee',
+      role: ROLES.EMPLOYEE,
       status: 'pending_hr'
       // Don't set emp_code - leave it undefined
     });
@@ -81,7 +89,7 @@ export const register = async (req, res) => {
 
     // Create notification for HR
     const notification = new NotificationModel({
-      toRole: 'hr',
+      toRole: ROLES.HR,
       message: `New employee registration: ${personal.fullName} (${email})`
     });
     await notification.save();
@@ -132,23 +140,8 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Prepare user response object
-    const userResponse = {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      emp_code: user.emp_code,
-      status: user.status
-    };
-
-    // If user is HR, fetch department and jobTitle
-    if (user.role === 'hr') {
-      const professionalDetails = await EmployeeProfessionalModel.findOne({ userId: user._id });
-      if (professionalDetails) {
-        userResponse.department = professionalDetails.department;
-        userResponse.jobTitle = professionalDetails.jobTitle;
-      }
-    }
+    const professionalDetails = await EmployeeProfessionalModel.findOne({ userId: user._id });
+    const userResponse = buildUserResponse({ user, professional: professionalDetails });
 
     // Generate JWT
     const token = generateToken({
@@ -179,22 +172,8 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const userResponse = {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      emp_code: user.emp_code,
-      status: user.status
-    };
-
-    // If user is HR, fetch department and jobTitle
-    if (user.role === 'hr') {
-      const professionalDetails = await EmployeeProfessionalModel.findOne({ userId: user._id });
-      if (professionalDetails) {
-        userResponse.department = professionalDetails.department;
-        userResponse.jobTitle = professionalDetails.jobTitle;
-      }
-    }
+    const professionalDetails = await EmployeeProfessionalModel.findOne({ userId: user._id });
+    const userResponse = buildUserResponse({ user, professional: professionalDetails });
 
     res.json(userResponse);
 
@@ -209,6 +188,19 @@ export const getMe = async (req, res) => {
 // @access  Private
 export const logout = (req, res) => {
   res.json({ message: 'Logged out successfully' });
+};
+
+// @desc    Get shared RBAC/reference options
+// @route   GET /api/auth/rbac
+// @access  Private
+export const getRbacConfig = (req, res) => {
+  res.json({
+    roles: Object.values(ROLES),
+    permissions: Object.values(PERMISSIONS),
+    departments: DEPARTMENTS,
+    designations: DESIGNATIONS,
+    employmentTypes: EMPLOYMENT_TYPES
+  });
 };
 
 // @desc    Request Password Reset

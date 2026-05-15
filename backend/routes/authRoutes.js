@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, logout, forgotPassword, resetPassword } from '../controllers/authController.js';
+import { register, login, getMe, logout, forgotPassword, resetPassword, getRbacConfig } from '../controllers/authController.js';
 import { auth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -40,6 +40,11 @@ router.get('/me', auth, getMe);
 // @desc    Logout user
 // @access  Private
 router.post('/logout', auth, logout);
+
+// @route   GET /api/auth/rbac
+// @desc    Get RBAC/reference options
+// @access  Private
+router.get('/rbac', auth, getRbacConfig);
 
 // @route   POST /api/auth/forgot-password
 // @desc    Request password reset OTP

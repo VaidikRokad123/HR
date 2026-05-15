@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const notificationSchema = new mongoose.Schema({
   toRole: {
     type: String,
-    enum: ['hr', 'employee'],
+    enum: ['hr', 'employee', 'all'],
     required: true
   },
   toEmpCode: {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const mutedText = { marginTop: '16px', color: '#aab3bc' };
+const mutedText = { marginTop: '16px', color: '#000000' };
 
 const WaitingPage = () => {
   const [status, setStatus] = useState('pending_hr');

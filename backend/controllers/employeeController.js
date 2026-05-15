@@ -6,7 +6,9 @@ import EmployeeAddressModel from '../models/EmployeeAddressModel.js';
 import EmployeeEmergencyModel from '../models/EmployeeEmergencyModel.js';
 import EmployeeProfessionalModel from '../models/EmployeeProfessionalModel.js';
 import EmployeeBankModel from '../models/EmployeeBankModel.js';
+import EmployeePayrollModel from '../models/EmployeePayrollModel.js';
 import NotificationModel from '../models/NotificationModel.js';
+import { ROLES } from '../config/rbac.js';
 
 // @desc    Check approval status
 // @route   GET /api/employee/waiting-status
@@ -58,9 +60,11 @@ export const getMyDetails = async (req, res) => {
     
     let professional = null;
     let bank = null;
+    let payroll = null;
 
     if (user.emp_code) {
       professional = await EmployeeProfessionalModel.findOne({ emp_code: user.emp_code });
+      payroll = await EmployeePayrollModel.findOne({ emp_code: user.emp_code });
       const bankData = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
       
       // Hide salary account details from employee
@@ -91,7 +95,8 @@ export const getMyDetails = async (req, res) => {
       address,
       emergency,
       professional,
-      bank
+      bank,
+      payroll
     });
 
   } catch (error) {
@@ -169,7 +174,7 @@ export const completeProfile = async (req, res) => {
 
     // Notify HR
     const notification = new NotificationModel({
-      toRole: 'hr',
+      toRole: ROLES.HR,
       message: `Employee ${user.emp_code} has completed their profile with bank details and LinkedIn URL`
     });
     await notification.save();

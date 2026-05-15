@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { DEPARTMENTS, DESIGNATIONS, EMPLOYMENT_TYPES } from '../config/rbac.js';
 
 const employeeProfessionalSchema = new mongoose.Schema({
   userId: {
@@ -29,51 +30,18 @@ const employeeProfessionalSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    enum: [
-      "Product & Delivery",
-      "Human Resources",
-      "Sales & marketing",
-      "Design",
-      "Engineering"
-    ]
+    enum: DEPARTMENTS
   },
   jobTitle: {
     type: String,
     required: true,
     trim: true,
-    enum: [
-      "SR Quality Assurance Engineer",
-      "Team Lead - Software Development",
-      "Software Development Engineer - SDE 3",
-      "Software Development Engineer - SDE 2",
-      "Software Development Engineer - SDE 1",
-      "Software Development - Intern",
-      "Jr. Video Editor",
-      "Sr. Human Resource Executive",
-      "Product Manager",
-      "Team Lead",
-      "Jr Human Resource Executive",
-      "Sr. BDE",
-      "Sr. UI/UX",
-      "Intern-Graphics",
-      "Intern - UI/UX UI/UX Designer",
-      "Quality Assurance Engineer",
-      "Quality Assurance - Intern",
-      "JR Quality Assurance Engineer"
-    ]
+    enum: DESIGNATIONS
   },
   employmentType: {
     type: String,
     trim: true,
-    enum: [
-      "Temporary",
-      "Permanent",
-      "Contract Base",
-      "Probation",
-      "Internship",
-      "Trainee",
-      "Notice period"
-    ]
+    enum: EMPLOYMENT_TYPES
   },
   reportingManager: {
     type: String,

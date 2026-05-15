@@ -79,7 +79,7 @@ const EmployeeDashboard = () => {
     return <div className="container"><div className="alert alert-error">No data found</div></div>;
   }
 
-  const { user, personal, family, address, emergency, professional, bank } = employeeData;
+  const { user, personal, family, address, emergency, professional, bank, payroll } = employeeData;
 
   return (
     <div className="container dashboard-wrapper">
@@ -437,6 +437,20 @@ const EmployeeDashboard = () => {
                     <p><strong>IFSC Code:</strong> {bank.personalIfsc}</p>
                   </>
                 )}
+              </div>
+            </div>
+          )}
+
+          {payroll && (
+            <div className="card">
+              <h3 style={{ marginBottom: '16px', fontSize: '18px', borderBottom: '2px solid var(--saffron)', paddingBottom: '10px' }}>Payroll Details</h3>
+              <div className="grid-2">
+                <p><strong>CTC:</strong> {payroll.ctc?.toLocaleString('en-IN') || 'N/A'}</p>
+                <p><strong>Gross Salary:</strong> {payroll.gross?.toLocaleString('en-IN') || 'N/A'}</p>
+                <p><strong>PF:</strong> {payroll.pf ? 'Applicable' : 'Not Applicable'}</p>
+                <p><strong>PT:</strong> {payroll.pt ? 'Applicable' : 'Not Applicable'}</p>
+                <p><strong>ESIC:</strong> {payroll.esic ? 'Applicable' : 'Not Applicable'}</p>
+                <p><strong>TDS:</strong> {payroll.tds ? 'Applicable' : 'Not Applicable'}</p>
               </div>
             </div>
           )}

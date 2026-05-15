@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const HRPendingApprovals = () => {
-  const [activeTab, setActiveTab] = useState('profiles'); // 'profiles' or 'payrolls'
+  const location = useLocation();
+  const initialTab = location.state?.activeTab === 'payrolls' ? 'payrolls' : 'profiles';
+  const [activeTab, setActiveTab] = useState(initialTab); // 'profiles' or 'payrolls'
   const [pendingEmployees, setPendingEmployees] = useState([]);
   const [pendingPayrolls, setPendingPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,6 @@ const HRPendingApprovals = () => {
       setPendingEmployees(response.data);
       setError('');
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       setError('Failed to load pending employees');
     } finally {
       setLoading(false);
@@ -52,7 +53,6 @@ const HRPendingApprovals = () => {
       setPendingPayrolls(response.data);
       setError('');
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       setError('Failed to load pending payrolls');
     } finally {
       setLoading(false);
@@ -95,7 +95,6 @@ const HRPendingApprovals = () => {
       setShowPayrollModal(false);
       fetchPendingPayrolls(); // Refresh list
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       alert(err.response?.data?.message || 'Failed to submit payroll details');
     } finally {
       setPayrollSubmitting(false);
@@ -111,34 +110,20 @@ const HRPendingApprovals = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #ccc', paddingBottom: '10px' }}>
-        <button 
+      <div className="hr-pending-tabs">
+        <button
+          type="button"
+          className={`hr-pending-tab${activeTab === 'profiles' ? ' hr-pending-tab--active' : ''}`}
           onClick={() => setActiveTab('profiles')}
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'profiles' ? 'var(--teal-mid)' : '#f0f0f0',
-            color: activeTab === 'profiles' ? '#fff' : '#333',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
         >
-          Profile Approvals ({activeTab === 'profiles' ? pendingEmployees.length : '...'})
+          Profiles ({activeTab === 'profiles' ? pendingEmployees.length : '…'})
         </button>
-        <button 
+        <button
+          type="button"
+          className={`hr-pending-tab${activeTab === 'payrolls' ? ' hr-pending-tab--active' : ''}`}
           onClick={() => setActiveTab('payrolls')}
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'payrolls' ? 'var(--teal-mid)' : '#f0f0f0',
-            color: activeTab === 'payrolls' ? '#fff' : '#333',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
         >
-          Payroll Approvals ({activeTab === 'payrolls' ? pendingPayrolls.length : '...'})
+          Payrolls ({activeTab === 'payrolls' ? pendingPayrolls.length : '…'})
         </button>
       </div>
 
@@ -150,7 +135,7 @@ const HRPendingApprovals = () => {
         // Profile Approvals Tab
         pendingEmployees.length === 0 ? (
           <div className="card">
-            <p style={{ textAlign: 'center', color: '#aab3bc' }}>
+            <p style={{ textAlign: 'center', color: '#000000' }}>
               No pending profiles at the moment.
             </p>
           </div>
@@ -164,17 +149,17 @@ const HRPendingApprovals = () => {
             >
               <div>
                 <h3>{employee.personal?.fullName || 'N/A'}</h3>
-                <p style={{ color: '#666', marginTop: '8px' }}>
+                <p style={{ color: '#000000', marginTop: '8px' }}>
                   <strong>Email:</strong> {employee.user.email}
                 </p>
-                <p style={{ color: '#666' }}>
+                <p style={{ color: '#000000' }}>
                   <strong>Mobile:</strong> {employee.personal?.mobile || 'N/A'}
                 </p>
-                <p style={{ color: '#666' }}>
+                <p style={{ color: '#000000' }}>
                   <strong>Submitted:</strong> {new Date(employee.user.createdAt).toLocaleDateString()}
                 </p>
               </div>
-              <span className="badge badge-pending" style={{ background: 'var(--saffron)', color: '#fff', padding: '5px 10px', borderRadius: '4px' }}>Pending Profile</span>
+              <span className="badge badge-pending">Pending</span>
             </div>
           ))
         )
@@ -182,7 +167,7 @@ const HRPendingApprovals = () => {
         // Payroll Approvals Tab
         pendingPayrolls.length === 0 ? (
           <div className="card">
-            <p style={{ textAlign: 'center', color: '#aab3bc' }}>
+            <p style={{ textAlign: 'center', color: '#000000' }}>
               No pending payrolls at the moment.
             </p>
           </div>
@@ -195,27 +180,22 @@ const HRPendingApprovals = () => {
             >
               <div>
                 <h3>{emp.personal?.fullName || 'N/A'} - {emp.user.emp_code}</h3>
-                <p style={{ color: '#666', marginTop: '8px' }}>
+                <p style={{ color: '#000000', marginTop: '8px' }}>
                   <strong>Email:</strong> {emp.user.email}
                 </p>
-                <p style={{ color: '#666' }}>
+                <p style={{ color: '#000000' }}>
                   <strong>Joined:</strong> {new Date(emp.user.dateJoined).toLocaleDateString()}
+                </p>
+                <p style={{ color: '#000000' }}>
+                  <strong>Department:</strong> {emp.professional?.department || 'N/A'}
+                </p>
+                <p style={{ color: '#000000' }}>
+                  <strong>Designation:</strong> {emp.professional?.jobTitle || 'N/A'}
                 </p>
               </div>
               <div>
-                <button 
-                  onClick={() => handleOpenPayrollModal(emp)}
-                  style={{
-                    background: 'var(--saffron-mid)',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Add Payroll
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => handleOpenPayrollModal(emp)}>
+                  Add payroll
                 </button>
               </div>
             </div>
@@ -225,10 +205,7 @@ const HRPendingApprovals = () => {
 
       {/* Payroll Modal */}
       {showPayrollModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
+        <div className="modal-overlay">
           <div className="card" style={{ width: '400px', maxWidth: '90vw' }}>
             <h3 style={{ color: 'var(--ink)' }}>Add Payroll Details for {selectedEmpForPayroll?.user.emp_code}</h3>
             <form onSubmit={handlePayrollSubmit} style={{ marginTop: '15px' }}>
@@ -272,20 +249,12 @@ const HRPendingApprovals = () => {
                 </label>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setShowPayrollModal(false)}
-                  style={{ padding: '8px 16px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--ink)', cursor: 'pointer', borderRadius: '4px' }}
-                >
+              <div className="page-actions" style={{ justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPayrollModal(false)}>
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  disabled={payrollSubmitting}
-                  style={{ padding: '8px 16px', border: 'none', background: 'var(--teal-mid)', color: '#fff', cursor: 'pointer', borderRadius: '4px' }}
-                >
-                  {payrollSubmitting ? 'Saving...' : 'Save Payroll'}
+                <button type="submit" className="btn btn-primary" disabled={payrollSubmitting}>
+                  {payrollSubmitting ? 'Saving...' : 'Save payroll'}
                 </button>
               </div>
             </form>

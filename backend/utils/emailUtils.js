@@ -1,111 +1,120 @@
 import nodemailer from 'nodemailer';
 import { google } from 'googleapis';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 const OAuth2 = google.auth.OAuth2;
 
-const createTransporter = async () => {
-  console.log('📧 Creating email transporter...');
-  
-  // Validate email configuration
-  const requiredEmailVars = [
-    'EMAIL_CLIENT_ID',
-    'EMAIL_CLIENT_SECRET',
-    'EMAIL_REFRESH_TOKEN',
-    'EMAIL_CLIENT_MAIL'
-  ];
-  
-  console.log('🔍 Checking email environment variables...');
-  requiredEmailVars.forEach(varName => {
-    const value = process.env[varName];
-    if (value) {
-      console.log(`✅ ${varName}: ${varName === 'EMAIL_CLIENT_MAIL' ? value : '***' + value.slice(-10)}`);
-    } else {
-      console.error(`❌ ${varName}: NOT SET`);
-    }
-  });
-  
-  const missingVars = requiredEmailVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    console.error('❌ Missing email configuration variables:', missingVars.join(', '));
-    throw new Error(`Email configuration incomplete. Missing: ${missingVars.join(', ')}`);
-  }
+const mask = (value = '') => {
+  if (!value) return 'NOT SET';
+  return value.length <= 8 ? '***' : `***${value.slice(-8)}`;
+};
 
-  console.log('🔐 Creating OAuth2 client...');
+const hasAllEnv = (names) => names.every((name) => Boolean(process.env[name]));
+
+const getSenderEmail = () => process.env.EMAIL_CLIENT_MAIL || process.env.EMAIL_USER;
+
+const createOAuthTransporter = async () => {
   const oauth2Client = new OAuth2(
     process.env.EMAIL_CLIENT_ID,
     process.env.EMAIL_CLIENT_SECRET,
-    "https://developers.google.com/oauthplayground" // standard redirect URI
+    'https://developers.google.com/oauthplayground'
   );
 
-  console.log('🎫 Setting OAuth2 credentials...');
   oauth2Client.setCredentials({
     refresh_token: process.env.EMAIL_REFRESH_TOKEN,
   });
 
-  console.log('🔑 Requesting access token...');
-  const accessToken = await new Promise((resolve, reject) => {
-    oauth2Client.getAccessToken((err, token) => {
-      if (err) {
-        console.error("❌ Failed to create access token");
-        console.error("Error name:", err.name);
-        console.error("Error message:", err.message);
-        console.error("Error code:", err.code);
-        console.error("Full error:", JSON.stringify(err, null, 2));
-        reject(new Error("Failed to create access token: " + err.message));
-      } else {
-        console.log("✅ Access token obtained successfully");
-        resolve(token);
-      }
-    });
-  });
+  const accessTokenResponse = await oauth2Client.getAccessToken();
+  const token =
+    typeof accessTokenResponse === 'string'
+      ? accessTokenResponse
+      : accessTokenResponse?.token;
 
-  console.log('📮 Creating nodemailer transporter...');
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
+  if (!token) {
+    throw new Error('Failed to create Gmail OAuth access token.');
+  }
+
+  return nodemailer.createTransport({
+    service: 'gmail',
     auth: {
-      type: "OAuth2",
+      type: 'OAuth2',
       user: process.env.EMAIL_CLIENT_MAIL,
-      accessToken,
+      accessToken: token,
       clientId: process.env.EMAIL_CLIENT_ID,
       clientSecret: process.env.EMAIL_CLIENT_SECRET,
       refreshToken: process.env.EMAIL_REFRESH_TOKEN,
     },
   });
+};
 
-  console.log('✅ Email transporter created successfully');
-  return transporter;
+const createAppPasswordTransporter = () => {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_APP_PASSWORD,
+    },
+  });
+};
+
+const createTransporter = async () => {
+  const oauthVars = [
+    'EMAIL_CLIENT_ID',
+    'EMAIL_CLIENT_SECRET',
+    'EMAIL_REFRESH_TOKEN',
+    'EMAIL_CLIENT_MAIL',
+  ];
+  const appPasswordVars = ['EMAIL_USER', 'EMAIL_APP_PASSWORD'];
+
+  console.log('[Email] Checking email configuration...');
+  console.log(`[Email] EMAIL_CLIENT_MAIL: ${process.env.EMAIL_CLIENT_MAIL || 'NOT SET'}`);
+  console.log(`[Email] EMAIL_CLIENT_ID: ${mask(process.env.EMAIL_CLIENT_ID)}`);
+  console.log(`[Email] EMAIL_CLIENT_SECRET: ${mask(process.env.EMAIL_CLIENT_SECRET)}`);
+  console.log(`[Email] EMAIL_REFRESH_TOKEN: ${mask(process.env.EMAIL_REFRESH_TOKEN)}`);
+  console.log(`[Email] EMAIL_USER: ${process.env.EMAIL_USER || 'NOT SET'}`);
+
+  if (hasAllEnv(oauthVars)) {
+    console.log('[Email] Using Gmail OAuth2 transporter.');
+    return createOAuthTransporter();
+  }
+
+  if (hasAllEnv(appPasswordVars)) {
+    console.log('[Email] Using Gmail app-password transporter.');
+    return createAppPasswordTransporter();
+  }
+
+  throw new Error(
+    'Email configuration incomplete. Set OAuth2 vars (EMAIL_CLIENT_ID, EMAIL_CLIENT_SECRET, EMAIL_REFRESH_TOKEN, EMAIL_CLIENT_MAIL) or app-password vars (EMAIL_USER, EMAIL_APP_PASSWORD).'
+  );
 };
 
 export const sendPasswordResetEmail = async (toEmail, userName, otp) => {
   try {
-    console.log('═══════════════════════════════════════════════════');
-    console.log('📧 EMAIL SENDING PROCESS STARTED');
-    console.log('═══════════════════════════════════════════════════');
-    console.log(`📬 To: ${toEmail}`);
-    console.log(`👤 User: ${userName}`);
-    console.log(`🔢 OTP: ${otp}`);
-    console.log('───────────────────────────────────────────────────');
-    
+    console.log(`[Email] Sending password reset OTP to ${toEmail}`);
+
     const transporter = await createTransporter();
 
-    console.log('📝 Preparing email content...');
     const mailOptions = {
-      from: `"HR Portal Support" <${process.env.EMAIL_CLIENT_MAIL}>`,
+      from: `"HR Portal Support" <${getSenderEmail()}>`,
       to: toEmail,
-      subject: "Password Reset Request - HR Portal",
+      subject: 'Password Reset Request - HR Portal',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
           <div style="background-color: #f7941d; padding: 20px; text-align: center;">
             <h2 style="color: white; margin: 0; font-size: 24px;">HR Management Portal</h2>
           </div>
           <div style="padding: 30px; background-color: #ffffff;">
-            <p style="font-size: 16px; color: #333;">Hello <strong>${userName}</strong>,</p>
+            <p style="font-size: 16px; color: #333;">Hello <strong>${userName || 'there'}</strong>,</p>
             <p style="font-size: 16px; color: #555; line-height: 1.5;">
-              We received a request to reset the password for your HR Portal account. 
+              We received a request to reset the password for your HR Portal account.
               Please use the following One-Time Password (OTP) to complete your password reset process.
             </p>
             <div style="text-align: center; margin: 30px 0;">
@@ -128,43 +137,35 @@ export const sendPasswordResetEmail = async (toEmail, userName, otp) => {
       `,
     };
 
-    console.log('📤 Sending email...');
     const info = await transporter.sendMail(mailOptions);
-    
-    console.log('═══════════════════════════════════════════════════');
-    console.log('✅ EMAIL SENT SUCCESSFULLY');
-    console.log('═══════════════════════════════════════════════════');
-    console.log(`📨 Message ID: ${info.messageId}`);
-    console.log(`📬 Accepted: ${info.accepted?.join(', ')}`);
-    console.log(`📭 Rejected: ${info.rejected?.join(', ') || 'None'}`);
-    console.log(`📊 Response: ${info.response}`);
-    console.log('═══════════════════════════════════════════════════');
-    
+
+    console.log(`[Email] Password reset OTP sent to ${toEmail}. Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error('═══════════════════════════════════════════════════');
-    console.error('❌ EMAIL SENDING FAILED');
-    console.error('═══════════════════════════════════════════════════');
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    console.error("Error code:", error.code);
-    console.error("Error stack:", error.stack);
-    
-    if (error.response) {
-      console.error("───────────────────────────────────────────────────");
-      console.error("Email service response:", error.response);
-    }
-    
-    if (error.responseCode) {
-      console.error("Response code:", error.responseCode);
-    }
-    
-    if (error.command) {
-      console.error("Failed command:", error.command);
-    }
-    
-    console.error('═══════════════════════════════════════════════════');
-    
+    console.error('[Email] Password reset email failed:', error.message);
+    if (error.response) console.error('[Email] Provider response:', error.response);
+    if (error.responseCode) console.error('[Email] Provider response code:', error.responseCode);
     return false;
+  }
+};
+
+/**
+ * Generic email sender used by the RabbitMQ email consumer for automated HR reminders.
+ */
+export const sendEmail = async (toEmail, subject, htmlBody) => {
+  try {
+    const transporter = await createTransporter();
+
+    const info = await transporter.sendMail({
+      from: `"Saeculum HRMS" <${getSenderEmail()}>`,
+      to: toEmail,
+      subject,
+      html: htmlBody,
+    });
+
+    console.log(`[Email] Sent to ${toEmail} | Subject: ${subject} | ID: ${info.messageId}`);
+  } catch (err) {
+    console.error(`[Email] Failed to send to ${toEmail}:`, err.message);
+    throw err;
   }
 };

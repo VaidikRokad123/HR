@@ -21,7 +21,6 @@ const HRAllEmployees = () => {
       const response = await axios.get('/hr/all-employees');
       setEmployees(response.data);
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       setError('Failed to load employees');
     } finally {
       setLoading(false);
@@ -143,17 +142,17 @@ const HRAllEmployees = () => {
   return (
     <div className="container">
       <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="page-header-row">
           <div>
             <h1>All Employees</h1>
             <p>{employees.length} approved employee(s)</p>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-primary" onClick={() => setIsBulkUploadOpen(true)}>
-              <i className="ti ti-upload" style={{ marginRight: '6px' }}></i> Upload Excel
+          <div className="page-actions">
+            <button type="button" className="btn btn-secondary" onClick={() => setIsBulkUploadOpen(true)}>
+              <i className="ti ti-upload" aria-hidden="true" /> Upload
             </button>
-            <button className="btn btn-success" onClick={exportToExcel}>
-              <i className="ti ti-file-excel" style={{ marginRight: '6px' }}></i> Export All to Excel
+            <button type="button" className="btn btn-primary" onClick={exportToExcel}>
+              <i className="ti ti-file-spreadsheet" aria-hidden="true" /> Export
             </button>
           </div>
         </div>
@@ -178,46 +177,50 @@ const HRAllEmployees = () => {
         </div>
 
         {filteredEmployees.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#aab3bc' }}>
-            No employees found.
-          </p>
+          <p className="empty-state">No employees found.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Emp Code</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Job Title</th>
-                <th>Date Joined</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEmployees.map((employee) => (
-                <tr key={employee.user.id}>
-                  <td>{employee.user.emp_code}</td>
-                  <td>{employee.personal?.fullName || 'N/A'}</td>
-                  <td>{employee.professional?.department || 'N/A'}</td>
-                  <td>{employee.professional?.jobTitle || 'N/A'}</td>
-                  <td>
-                    {employee.professional?.dateJoined
-                      ? new Date(employee.professional.dateJoined).toLocaleDateString()
-                      : 'N/A'}
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => navigate(`/hr/employee/${employee.user.id}`)}
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      View Details
-                    </button>
-                  </td>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Emp Code</th>
+                  <th>Name</th>
+                  <th>Department</th>
+                  <th>Job Title</th>
+                  <th>Joined</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredEmployees.map((employee) => (
+                  <tr key={employee.user.id}>
+                    <td>{employee.user.emp_code}</td>
+                    <td className="cell-title">{employee.personal?.fullName || 'N/A'}</td>
+                    <td>{employee.professional?.department || 'N/A'}</td>
+                    <td>{employee.professional?.jobTitle || 'N/A'}</td>
+                    <td>
+                      {employee.professional?.dateJoined
+                        ? new Date(employee.professional.dateJoined).toLocaleDateString()
+                        : 'N/A'}
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          title="View details"
+                          aria-label="View details"
+                          onClick={() => navigate(`/hr/employee/${employee.user.id}`)}
+                        >
+                          <i className="ti ti-eye" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

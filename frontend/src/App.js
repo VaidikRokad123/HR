@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -11,16 +11,17 @@ import CompleteProfile from './pages/CompleteProfile';
 import HRPendingApprovals from './pages/HRPendingApprovals';
 import HREmployeeDetail from './pages/HREmployeeDetail';
 import HRAllEmployees from './pages/HRAllEmployees';
+import HRUpcomingEvents from './pages/HRUpcomingEvents';
 import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
-function App() {
+function AppShell() {
+  const { user } = useAuth();
   return (
-    <AuthProvider>
-      <Router>
-        <div className="App">
-          <Navbar />
-          <Routes>
+    <div className={user ? 'App App--logged-in' : 'App'}>
+      {user ? <Navbar /> : null}
+      <main className={user ? 'app-main' : 'app-main app-main--full'}>
+        <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -76,10 +77,27 @@ function App() {
                 </PrivateRoute>
               } 
             />
+            <Route 
+              path="/hr/upcoming-events" 
+              element={
+                <PrivateRoute role="hr">
+                  <HRUpcomingEvents />
+                </PrivateRoute>
+              } 
+            />
             
             <Route path="/" element={<Navigate to="/login" />} />
-          </Routes>
-        </div>
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppShell />
       </Router>
     </AuthProvider>
   );

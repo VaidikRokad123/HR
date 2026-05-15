@@ -8,6 +8,10 @@ import employeeRoutes from './routes/employeeRoutes.js';
 import hrRoutes from './routes/hrRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import { initializeCounter } from './utils/empCodeUtils.js';
+import { setupRabbitMQ } from './queues/setup.js';
+import { startEmailConsumer } from './queues/consumers/emailConsumer.js';
+import { startNotificationConsumer } from './queues/consumers/notificationConsumer.js';
+import './jobs/reminderJob.js';  // registers cron on import
 
 dotenv.config();
 
@@ -26,11 +30,6 @@ if (missingEnvVars.length > 0) {
 
 const app = express();
 
-// Connect to MongoDB
-connectDB();
-
-// Initialize employee code counter
-initializeCounter();
 
 // Middleware
 app.use(cors({
@@ -64,8 +63,29 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
-});
+async function startServer() {
+  // Connect to MongoDB
+  await connectDB();
+
+  // Initialize employee code counter
+  initializeCounter();
+
+  // Start RabbitMQ — setup exchange/queues, then start consumers
+  try {
+    await setupRabbitMQ();
+    await startEmailConsumer();
+    await startNotificationConsumer();
+    console.log('🐇 Notification system (RabbitMQ) ready');
+  } catch (err) {
+    console.error('⚠️  RabbitMQ not available — running without notification system:', err.message);
+    console.error('   Set RABBITMQ_URL in .env to enable automated HR reminders.');
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+  });
+}
+
+startServer();

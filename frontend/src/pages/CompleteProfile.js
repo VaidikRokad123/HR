@@ -72,7 +72,6 @@ const CompleteProfile = () => {
       
       return null;
     } catch (e) {
-      console.error("❌ Caught Error:", e);
       return 'Please provide a valid URL starting with https://';
     }
   };
@@ -148,7 +147,6 @@ const CompleteProfile = () => {
       // Navigate to dashboard
       navigate('/employee/dashboard', { replace: true });
     } catch (err) {
-      console.error("❌ Caught Error:", err);
       setError(err.response?.data?.message || 'Failed to complete profile');
     } finally {
       setLoading(false);
@@ -168,7 +166,7 @@ const CompleteProfile = () => {
     <div className="container">
       <div className="card" style={{ maxWidth: '800px', margin: '40px auto' }}>
         <h2>Complete Your Profile</h2>
-        <p style={{ color: '#aab3bc', marginBottom: '24px' }}>
+        <p style={{ color: '#000000', marginBottom: '24px' }}>
           🎉 Congratulations! Your profile has been approved by HR. Please complete the following mandatory information to access your dashboard.
         </p>
 
@@ -176,7 +174,7 @@ const CompleteProfile = () => {
 
         <form onSubmit={handleSubmit}>
           <h3>Bank Details</h3>
-          <p style={{ color: '#98a4ae', fontSize: '13px', marginBottom: '16px' }}>
+          <p style={{ color: '#000000', fontSize: '13px', marginBottom: '16px' }}>
             These details will be used for salary processing and other financial transactions.
           </p>
           
@@ -301,7 +299,7 @@ const CompleteProfile = () => {
                   {validationErrors.personalIfsc && (
                     <small style={{ color: '#d84a4a' }}>{validationErrors.personalIfsc}</small>
                   )}
-                  <small style={{ color: '#98a4ae', display: 'block', marginTop: '4px' }}>
+                  <small style={{ color: '#000000', display: 'block', marginTop: '4px' }}>
                     11-character code (e.g., SBIN0001234)
                   </small>
                 </div>
@@ -310,7 +308,7 @@ const CompleteProfile = () => {
           </div>
 
           <h3 style={{ marginTop: '32px' }}>Professional Details</h3>
-          <p style={{ color: '#98a4ae', fontSize: '13px', marginBottom: '16px' }}>
+          <p style={{ color: '#000000', fontSize: '13px', marginBottom: '16px' }}>
             Your LinkedIn profile helps us verify your professional background and connect with you.
           </p>
           
@@ -328,7 +326,7 @@ const CompleteProfile = () => {
               {validationErrors.linkedinUrl && (
                 <small style={{ color: '#d84a4a' }}>{validationErrors.linkedinUrl}</small>
               )}
-              <small style={{ color: '#98a4ae', display: 'block', marginTop: '4px' }}>
+              <small style={{ color: '#000000', display: 'block', marginTop: '4px' }}>
                 Your complete LinkedIn profile URL is mandatory
               </small>
             </div>
@@ -342,14 +340,14 @@ const CompleteProfile = () => {
                 onChange={handleChange}
                 placeholder="Enter name exactly as on Aadhaar"
               />
-              <small style={{ color: '#98a4ae', display: 'block', marginTop: '4px' }}>
+              <small style={{ color: '#000000', display: 'block', marginTop: '4px' }}>
                 This helps with identity verification
               </small>
             </div>
           </div>
 
-          <div style={{ marginTop: '32px', padding: '16px', backgroundColor: '#1e2428', borderRadius: '4px', border: '1px solid #2d333a' }}>
-            <p style={{ margin: 0, fontSize: '13px', color: '#98a4ae' }}>
+          <div style={{ marginTop: '32px', padding: '16px', backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #cccccc' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: '#000000' }}>
               ⚠️ <strong>Important:</strong> Once submitted, you cannot edit these details yourself. 
               Any changes will require HR approval. Please ensure all information is accurate.
             </p>

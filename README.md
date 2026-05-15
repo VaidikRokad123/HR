@@ -45,12 +45,13 @@ A comprehensive Saeculum Employee Management System with multi-step registration
   - Add CTC and salary structure details for new employees.
   - **Probation Tracking**: Automated notifications for HR when an employee's probation period ends.
 - **Export to Excel**: Download a comprehensive report of all employee data across multiple sheets.
-- **Notification System**: Track employee actions and profile updates
+- **Notification System**: Track employee actions and profile updates.
 
 ### Security Features
 - JWT-based authentication with token expiration
 - Role-based access control (Employee/HR)
 - Password hashing with bcrypt
+- **Password Recovery**: Secure forgot password flow using OTP sent via email (OAuth2).
 - Protected routes and middleware
 - Input validation with express-validator
 
@@ -61,6 +62,7 @@ A comprehensive Saeculum Employee Management System with multi-step registration
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose ODM
 - **Authentication**: JWT (jsonwebtoken) + bcryptjs
+- **Email/Notifications**: Nodemailer with Google OAuth2
 - **Validation**: express-validator
 - **CORS**: cors middleware
 - **Environment**: dotenv
@@ -139,7 +141,7 @@ This script will:
 # Backend
 cd backend
 cp .env.example .env
-# Edit .env with your MongoDB URI and JWT secret
+# Edit .env with your MongoDB URI, JWT secret, and Email configuration for OTPs
 
 # Frontend
 cd frontend
@@ -173,12 +175,17 @@ npm start
 ```env
 PORT=5001
 MONGODB_URI=mongodb://localhost:27017/hr_portal
-# Or use MongoDB Atlas connection string
 MONGODB_DB_NAME=HR
 JWT_SECRET=your_jwt_secret_key_here_change_in_production
 JWT_EXPIRE=24h
 NODE_ENV=development
 CLIENT_URL=http://localhost:3000
+
+# Email Configuration (for OTPs)
+EMAIL_CLIENT_ID=your_google_oauth_client_id
+EMAIL_CLIENT_SECRET=your_google_oauth_client_secret
+EMAIL_REFRESH_TOKEN=your_google_oauth_refresh_token
+EMAIL_CLIENT_MAIL=your_authorized_gmail_address
 ```
 
 ### Frontend (.env)
@@ -194,77 +201,40 @@ REACT_APP_API_URL=http://localhost:5000/api
 ```http
 POST /api/auth/register
 Content-Type: application/json
-
-{
-  "email": "employee@example.com",
-  "password": "password123",
-  "personal": {
-    "fullName": "John Doe",
-    "gender": "Male",
-    "dob": "1990-01-01",
-    "mobile": "1234567890"
-  },
-  "family": {
-    "fatherName": "Father Name",
-    "motherName": "Mother Name",
-    "maritalStatus": "Single",
-    "spouseName": "",
-    "marriageDate": ""
-  },
-  "address": {
-    "currentAddress": {
-      "street": "123 Main St",
-      "city": "City",
-      "state": "State",
-      "pincode": "123456",
-      "country": "India"
-    },
-    "permanentAddress": {
-      "street": "123 Main St",
-      "city": "City",
-      "state": "State",
-      "pincode": "123456",
-      "country": "India"
-    },
-    "permanentAddress": { /* same structure */ }
-  },
-  "emergency": {
-    "emergencyContact1": {
-      "name": "Emergency Contact",
-      "relationship": "Father",
-      "mobile": "9876543210"
-    }
-  }
-}
 ```
 
 #### Login
 ```http
 POST /api/auth/login
 Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-
-Response:
-{
-  "token": "jwt_token_here",
-  "user": {
-    "id": "user_id",
-    "email": "user@example.com",
-    "role": "employee",
-    "emp_code": "EMP0001",
-    "status": "approved"
-  }
-}
 ```
 
 #### Get Current User
 ```http
 GET /api/auth/me
 Authorization: Bearer <token>
+```
+
+#### Forgot Password
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+#### Reset Password
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "otp": "123456",
+  "newPassword": "newpassword123"
+}
 ```
 
 ### Employee Routes (`/api/employee`)
@@ -285,16 +255,6 @@ Authorization: Bearer <token>
 ```http
 PUT /api/employee/complete-profile
 Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "bankName": "Bank Name",
-  "branch": "Branch Name",
-  "personalAccountNumber": "1234567890",
-  "personalIfsc": "BANK0001234",
-  "linkedinUrl": "https://linkedin.com/in/profile",
-  "nameAsPerAadhaar": "Name As Per Aadhaar"
-}
 ```
 
 ### HR Routes (`/api/hr`)
@@ -315,35 +275,12 @@ Authorization: Bearer <token>
 ```http
 PUT /api/hr/employee/:id/approve
 Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "dateJoined": "2024-01-01",
-  "department": "Engineering",
-  "jobTitle": "Software Engineer",
-  "reportingManager": "Manager Name",
-  "workEmail": "employee@company.com",
-  "attendanceBiometricId": "BIO123",
-  "inProbation": true
-}
-```
-
-#### Reject Employee
-```http
-PUT /api/hr/employee/:id/reject
-Authorization: Bearer <token>
 ```
 
 #### Edit Employee
 ```http
 PUT /api/hr/employee/:id/edit
 Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "module": "personal|family|address|emergency|professional|bank",
-  "data": { /* module-specific fields */ }
-}
 ```
 
 #### Get All Employees
@@ -352,10 +289,11 @@ GET /api/hr/all-employees
 Authorization: Bearer <token>
 ```
 
-### Notification Routes (`/api/notifications`)
+#### Bulk Upload Employees
 ```http
-GET /api/notifications
+POST /api/hr/bulk-upload
 Authorization: Bearer <token>
+Content-Type: multipart/form-data
 ```
 
 ## 👥 User Workflows
@@ -375,188 +313,28 @@ Authorization: Bearer <token>
 
 3. **Profile Completion** (After HR Approval)
    - Status: `approved`
-   - Redirected to `/employee/complete-profile`
-   - Must provide:
-     - Bank details (name, branch, account number, IFSC)
-     - LinkedIn URL (mandatory)
-     - Name as per Aadhaar (optional)
-   - Submit to complete onboarding
+   - Must provide Bank details and LinkedIn URL
 
 4. **Dashboard Access**
-   - View complete profile information
-   - See employee code (EMP0001, etc.)
-   - Access all personal, family, professional, and bank details
+   - View complete profile information and access to editing basic details.
 
 ### HR Journey
 
 1. **Login**
    - Use default credentials or created HR account
-   - Redirected to `/hr/pending` page
 
 2. **Review Pending Registrations**
    - View list of pending employees
-   - Click on employee to see full details
 
 3. **Approve Employee**
    - Review all submitted information
-   - Fill professional details:
-     - Date joined
-     - Department
-     - Job title
-     - Reporting manager
-     - Work email
-     - Biometric ID
-     - Probation status
+   - Fill professional details (Date joined, Department, etc.)
    - System auto-generates unique employee code
-   - Employee receives notification
 
 4. **Manage Employees**
    - View all approved employees at `/hr/all-employees`
-   - Search by name, emp code, department, or job title
-   - View detailed employee profiles
    - Edit any employee information module
-
-## 🗄 Database Schema
-
-### Collections
-
-#### Users
-```javascript
-{
-  _id: ObjectId,
-  email: String (unique),
-  passwordHash: String,
-  role: "employee" | "hr",
-  emp_code: String (unique, sparse),
-  status: "pending_hr" | "approved" | "rejected",
-  createdAt: Date
-}
-```
-
-#### EmployeePersonal
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String,
-  fullName: String,
-  gender: "Male" | "Female" | "Other",
-  dob: Date,
-  age: Number (auto-calculated),
-  mobile: String,
-  personalEmail: String,
-  bloodGroup: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
-}
-```
-
-#### EmployeeFamily
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String,
-  fatherName: String,
-  motherName: String,
-  married: Boolean,
-  spouseName: String,
-  marriageDate: Date
-}
-```
-
-#### EmployeeAddress
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String,
-  currentAddress: {
-    street: String,
-    city: String,
-    state: String,
-    pincode: String,
-    country: String
-  },
-  permanentAddress: { /* same structure */ }
-}
-```
-
-#### EmployeeEmergency
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String,
-  emergencyContact1: {
-    name: String,
-    relationship: String,
-    mobile: String
-  },
-  emergencyContact2: { /* same structure, optional */ }
-}
-```
-
-#### EmployeeProfessional
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String (unique),
-  nameAsPerAadhaar: String,
-  dateJoined: Date,
-  tenure: String,
-  exitDate: Date,
-  department: String,
-  jobTitle: String,
-  reportingManager: String,
-  attendanceBiometricId: String,
-  inProbation: Boolean,
-  workEmail: String,
-  linkedinUrl: String
-}
-```
-
-#### EmployeeBank
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String,
-  bankName: String,
-  branch: String,
-  personalAccountNumber: String,
-  personalIfsc: String,
-  salaryAccountNumber: String,
-  salaryIfsc: String
-}
-```
-
-#### EmployeePayroll
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User),
-  emp_code: String,
-  ctc: Number,
-  gross: Number,
-  pf: Boolean,
-  pt: Boolean,
-  esic: Boolean,
-  tds: Boolean
-}
-```
-
-#### Notifications
-```javascript
-{
-  _id: ObjectId,
-  toRole: "hr" | "employee",
-  toEmpCode: String,
-  toUserId: ObjectId (ref: User),
-  message: String,
-  isRead: Boolean,
-  createdAt: Date
-}
-```
+   - Bulk upload employees
 
 ## 📁 Project Structure
 
@@ -573,24 +351,11 @@ HR-MAIN/
 │   ├── middleware/
 │   │   └── authMiddleware.js        # JWT & role verification
 │   ├── models/
-│   │   ├── UserModel.js
-│   │   ├── EmployeePersonalModel.js
-│   │   ├── EmployeeFamilyModel.js
-│   │   ├── EmployeeAddressModel.js
-│   │   ├── EmployeeEmergencyModel.js
-│   │   ├── EmployeeProfessionalModel.js
-│   │   ├── EmployeeBankModel.js
-│   │   └── NotificationModel.js
 │   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── employeeRoutes.js
-│   │   ├── hrRoutes.js
-│   │   └── notificationRoutes.js
 │   ├── scripts/
-│   │   ├── seedHR.js                # Create default HR user
-│   │   └── fixIndexes.js            # Database maintenance
 │   ├── utils/
 │   │   ├── empCodeUtils.js          # Employee code generator
+│   │   ├── emailUtils.js            # Nodemailer OAuth2 configuration
 │   │   └── jwtUtils.js              # JWT helpers
 │   ├── .env.example
 │   ├── package.json
@@ -598,26 +363,12 @@ HR-MAIN/
 │
 ├── frontend/
 │   ├── public/
-│   │   └── index.html
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Navbar.js
-│   │   │   ├── Navbar.css
-│   │   │   └── PrivateRoute.js      # Protected route wrapper
 │   │   ├── context/
-│   │   │   └── AuthContext.js       # Global auth state
 │   │   ├── pages/
-│   │   │   ├── Login.js
-│   │   │   ├── Signup.js            # Multi-step registration
-│   │   │   ├── WaitingPage.js       # Pending approval page
-│   │   │   ├── CompleteProfile.js   # Bank + LinkedIn form
-│   │   │   ├── EmployeeDashboard.js
-│   │   │   ├── HRPendingApprovals.js
-│   │   │   ├── HREmployeeDetail.js
-│   │   │   └── HRAllEmployees.js
 │   │   ├── App.js                   # Route configuration
 │   │   ├── App.css
-│   │   ├── index.js
 │   │   └── index.css
 │   ├── .env.example
 │   └── package.json
@@ -632,76 +383,9 @@ HR-MAIN/
 - **Email**: `hr@company.com`
 - **Password**: `hr123456`
 
-> **Note**: Change the default HR password in production!
-
-### Creating Additional HR Users
-Run the seed script or manually create in MongoDB with `role: "hr"` and `status: "approved"`.
-
-## 🔧 Utility Scripts
-
-### Seed HR User
-```bash
-cd backend
-node scripts/seedHR.js
-```
-Creates the default HR user if it doesn't exist.
-
-### Fix Database Indexes
-```bash
-cd backend
-node scripts/fixIndexes.js
-```
-Repairs database indexes if needed.
-
-## 🎨 Frontend Features
-
-### Responsive Design
-- Mobile-friendly layouts
-- Grid-based forms
-- Card-based UI components
-- Custom CSS styling
-
-### Protected Routes
-- Role-based route protection
-- Automatic redirects based on user status
-- Auth state persistence with localStorage
-
-### Form Validation
-- Client-side validation
-- Server-side validation with express-validator
-- Error message display
-
-## 🔒 Security Best Practices
-
-1. **Password Security**
-   - Passwords hashed with bcrypt (10 salt rounds)
-   - Minimum 6 characters required
-   - Never stored in plain text
-
-2. **JWT Security**
-   - Tokens expire after 24 hours (configurable)
-   - Stored in localStorage (frontend)
-   - Sent via Authorization header
-   - Verified on every protected route
-
-3. **Role-Based Access**
-   - Middleware checks user role
-   - Separate routes for HR and Employee
-   - Database queries filtered by user context
-
-4. **Input Validation**
-   - express-validator on all inputs
-   - Email normalization
-   - Required field validation
-   - Type checking
-
-5. **CORS Configuration**
-   - Configured for specific client URL
-   - Credentials enabled for cookies
-
 ## 🚧 Future Enhancements
 
-- [ ] Email notifications (SendGrid/Nodemailer)
+- [x] Email notifications (Password Reset OTP via Gmail OAuth2)
 - [x] Payroll integration (Basic Setup)
 - [ ] Multi-language support
 - [ ] Dark mode
@@ -710,50 +394,22 @@ Repairs database indexes if needed.
 
 ### MongoDB Connection Issues
 ```bash
-# Check if MongoDB is running
-# Windows:
-tasklist | find "mongod"
-
-# Start MongoDB service
 net start MongoDB
 ```
 
 ### Port Already in Use
 ```bash
-# Backend (Port 5000)
-# Kill process using port 5000
 netstat -ano | findstr :5000
 taskkill /PID <PID> /F
-
-# Frontend (Port 3000)
-# React will prompt to use different port
 ```
 
 ### JWT Token Issues
 - Clear localStorage in browser
 - Check JWT_SECRET in .env
-- Verify token expiration time
-
-### CORS Errors
-- Verify CLIENT_URL in backend .env
-- Check REACT_APP_API_URL in frontend .env
-- Ensure both servers are running
 
 ## 📄 License
 
 This project is licensed under the ISC License.
-
-## 👨‍💻 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📞 Support
-
-For issues and questions, please open an issue in the repository.
 
 ---
 

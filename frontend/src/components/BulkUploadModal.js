@@ -403,7 +403,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             type="button"
             role="tab"
             aria-selected={activeTab === 'review'}
-            className={`bulk-tab bulk-tab--green${activeTab === 'review' ? ' active' : ''}`}
+            className={`bulk-tab${activeTab === 'review' ? ' active' : ''}`}
             disabled={parsedData.length === 0}
             onClick={() => parsedData.length > 0 && setActiveTab('review')}
           >
@@ -443,10 +443,10 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               <div className="bulk-sheet-hints">
                 <span className="bulk-hint-label">Multi-sheet template</span>
                 <p>
-                  Sheets: <span className="hl-orange">Personal</span>,{' '}
-                  <span className="hl-green">Professional</span>,{' '}
-                  <span className="hl-orange">Family</span>, <span className="hl-green">Address</span>,{' '}
-                  <span className="hl-orange">Bank</span>, <span className="hl-green">Emergency</span> — keyed by{' '}
+                  Sheets: <span className="hl-sheet">Personal</span>,{' '}
+                  <span className="hl-sheet">Professional</span>,{' '}
+                  <span className="hl-sheet">Family</span>, <span className="hl-sheet">Address</span>,{' '}
+                  <span className="hl-sheet">Bank</span>, <span className="hl-sheet">Emergency</span> — keyed by{' '}
                   <strong>EmpCode</strong> or email.
                 </p>
                 <p className="bulk-hint-alt">
@@ -649,7 +649,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             Cancel
           </button>
           {activeTab === 'review' && parsedData.length > 0 && (
-            <button type="button" className="btn btn-success" onClick={handleSubmit} disabled={loading || parsedData.length === 0}>
+            <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={loading || parsedData.length === 0}>
               {loading ? 'Uploading…' : `Confirm & Upload All`}
             </button>
           )}

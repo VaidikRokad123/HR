@@ -19,33 +19,12 @@ const ForgotPassword = () => {
     setError('');
     setMessage('');
     
-    console.log('🔐 Forgot Password - Requesting OTP');
-    console.log('📧 Email:', email);
-    console.log('🌐 API URL:', process.env.REACT_APP_API_URL);
-    
     try {
-      // Remove duplicate /api since REACT_APP_API_URL already includes it
-      const apiUrl = `${process.env.REACT_APP_API_URL}/auth/forgot-password`;
-      console.log('📤 Sending request to:', apiUrl);
-      
-      const res = await axios.post(apiUrl, { email });
-      
-      console.log('✅ Response received:', res.data);
+      const res = await axios.post('/auth/forgot-password', { email });
       setMessage(res.data.message || 'OTP sent successfully.');
       setStep(2);
     } catch (err) {
-      console.error('═══════════════════════════════════════════════════');
-      console.error('❌ FORGOT PASSWORD ERROR');
-      console.error('═══════════════════════════════════════════════════');
-      console.error('Error object:', err);
-      console.error('Error message:', err.message);
-      console.error('Error response:', err.response);
-      console.error('Error response data:', err.response?.data);
-      console.error('Error response status:', err.response?.status);
-      console.error('Error config:', err.config);
-      console.error('═══════════════════════════════════════════════════');
-      
-      setError(err.response?.data?.message || 'Failed to send OTP. Check console for details.');
+      setError(err.response?.data?.message || 'Failed to send OTP.');
     } finally {
       setLoading(false);
     }
@@ -57,38 +36,18 @@ const ForgotPassword = () => {
     setError('');
     setMessage('');
     
-    console.log('🔄 Reset Password - Submitting OTP');
-    console.log('📧 Email:', email);
-    console.log('🔢 OTP:', otp);
-    
     try {
-      // Remove duplicate /api since REACT_APP_API_URL already includes it
-      const apiUrl = `${process.env.REACT_APP_API_URL}/auth/reset-password`;
-      console.log('📤 Sending request to:', apiUrl);
-      
-      const res = await axios.post(apiUrl, { 
+      const res = await axios.post('/auth/reset-password', { 
         email, 
         otp, 
         newPassword 
       });
-      
-      console.log('✅ Password reset successful:', res.data);
       setMessage(res.data.message || 'Password reset successful.');
       setTimeout(() => {
         navigate('/login');
       }, 3000);
     } catch (err) {
-      console.error('═══════════════════════════════════════════════════');
-      console.error('❌ RESET PASSWORD ERROR');
-      console.error('═══════════════════════════════════════════════════');
-      console.error('Error object:', err);
-      console.error('Error message:', err.message);
-      console.error('Error response:', err.response);
-      console.error('Error response data:', err.response?.data);
-      console.error('Error response status:', err.response?.status);
-      console.error('═══════════════════════════════════════════════════');
-      
-      setError(err.response?.data?.message || 'Failed to reset password. Check console for details.');
+      setError(err.response?.data?.message || 'Failed to reset password.');
     } finally {
       setLoading(false);
     }
@@ -104,7 +63,7 @@ const ForgotPassword = () => {
         
         {step === 1 ? (
           <form onSubmit={handleRequestOtp}>
-            <p style={{ marginBottom: '20px', color: '#555', fontSize: '14px' }}>
+            <p style={{ marginBottom: '20px', color: '#000000', fontSize: '14px' }}>
               Enter your company email address. We will send an OTP to your registered personal email.
             </p>
             <div className="form-group">
@@ -129,7 +88,7 @@ const ForgotPassword = () => {
           </form>
         ) : (
           <form onSubmit={handleResetPassword}>
-            <p style={{ marginBottom: '20px', color: '#555', fontSize: '14px' }}>
+            <p style={{ marginBottom: '20px', color: '#000000', fontSize: '14px' }}>
               Enter the 6-digit OTP sent to your personal email and your new password.
             </p>
             <div className="form-group">
