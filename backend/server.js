@@ -8,6 +8,7 @@ import employeeRoutes from './routes/employeeRoutes.js';
 import hrRoutes from './routes/hrRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import { initializeCounter } from './utils/empCodeUtils.js';
 import { setupRabbitMQ } from './queues/setup.js';
 import { startEmailConsumer } from './queues/consumers/emailConsumer.js';
@@ -48,6 +49,7 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

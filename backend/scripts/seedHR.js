@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
 import UserModel from '../models/UserModel.js';
 import CounterModel from '../models/CounterModel.js';
 import EmployeePersonalModel from '../models/EmployeePersonalModel.js';
@@ -10,7 +11,7 @@ import EmployeeEmergencyModel from '../models/EmployeeEmergencyModel.js';
 import EmployeeProfessionalModel from '../models/EmployeeProfessionalModel.js';
 import EmployeeBankModel from '../models/EmployeeBankModel.js';
 
-dotenv.config();
+dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
 
 const seedHR = async () => {
   try {
@@ -31,11 +32,11 @@ const seedHR = async () => {
       console.log('✅ Employee code counter already exists (current value: ' + existingCounter.value + ')');
     }
 
-    // Check if HR user already exists
+    // Check if HR user already exists by email
     const existingHR = await UserModel.findOne({ email: 'vaidik@saeculum.com' });
     
     if (existingHR) {
-      console.log('✅ HR user already exists!');
+      console.log('✅ HR user already exists by email!');
       console.log('Email: vaidik@saeculum.com');
       console.log('Employee Code: ' + existingHR.emp_code);
       
@@ -45,15 +46,27 @@ const seedHR = async () => {
       process.exit(0);
     }
 
+    const emp_code = 'EMP0001';
+
+    // Check if the emp_code is already taken by someone else and clean it up
+    const existingEmpCode = await UserModel.findOne({ emp_code });
+    if (existingEmpCode) {
+      console.log(`⚠️ User with ${emp_code} already exists (Email: ${existingEmpCode.email}). Cleaning up existing data...`);
+      await UserModel.deleteOne({ emp_code });
+      await EmployeePersonalModel.deleteOne({ emp_code });
+      await EmployeeFamilyModel.deleteOne({ emp_code });
+      await EmployeeAddressModel.deleteOne({ emp_code });
+      await EmployeeEmergencyModel.deleteOne({ emp_code });
+      await EmployeeProfessionalModel.deleteOne({ emp_code });
+      await EmployeeBankModel.deleteOne({ emp_code });
+    }
+
     // Ensure counter is updated to at least 2 so future employees get EMP0003+
     const counter = await CounterModel.findOne({ name: 'emp_code' });
     if (counter && counter.value < 2) {
       await CounterModel.findOneAndUpdate({ name: 'emp_code' }, { value: 2 });
     }
     
-    // Assign specific EMP0001 code to Vaidik
-    const emp_code = 'EMP0001';
-
     // Create HR user with employee code
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('vaidik123', salt);

@@ -14,6 +14,7 @@ import HRAllEmployees from './pages/HRAllEmployees';
 import HRUpcomingEvents from './pages/HRUpcomingEvents';
 import HRDocuments from './pages/HRDocuments';
 import OfferLetterAdvancedEditor from './pages/OfferLetterAdvancedEditor';
+import AddEmployee from './pages/AddEmployee';
 import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
@@ -100,6 +101,14 @@ function AppShell() {
               element={
                 <PrivateRoute role="hr">
                   <OfferLetterAdvancedEditor />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hr/add-employee"
+              element={
+                <PrivateRoute role="hr">
+                  <AddEmployee />
                 </PrivateRoute>
               }
             />

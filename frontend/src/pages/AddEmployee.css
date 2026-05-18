@@ -1,0 +1,379 @@
+/* ── AddEmployee form ───────────────────────────────── */
+
+.ae-wrap {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 18px 20px 40px;
+}
+
+/* ── stepper ─────────────────────────────────────────── */
+.ae-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+.ae-step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 0;
+}
+.ae-step-bubble {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.ae-step-bubble.done {
+  background: var(--color-black);
+  border-color: var(--color-black);
+  color: #fff;
+}
+.ae-step-bubble.active {
+  border-color: var(--color-black);
+  color: var(--color-black);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
+}
+.ae-step-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.ae-step-label.active { color: var(--color-text); font-weight: 600; }
+.ae-step-label.done   { color: var(--color-text-secondary); }
+.ae-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--color-border);
+  margin: 0 8px;
+}
+.ae-step-line.done { background: var(--color-black); }
+
+/* ── header row ──────────────────────────────────────── */
+.ae-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.ae-header-left h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.ae-header-left p {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+.ae-autosave {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ae-autosave.saved { color: #16a34a; }
+.ae-autosave.saving { color: var(--color-text-muted); }
+
+/* ── section block ───────────────────────────────────── */
+.ae-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.ae-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ae-section-title span { font-size: 14px; }
+
+/* ── grid ────────────────────────────────────────────── */
+.ae-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ae-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 560px) {
+  .ae-grid-2, .ae-grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ── field ───────────────────────────────────────────── */
+.ae-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ae-field.full { grid-column: 1 / -1; }
+.ae-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ae-label .req {
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1;
+}
+.ae-label .opt {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  background: #f5f5f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.ae-field input,
+.ae-field select,
+.ae-field textarea {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: var(--font-family);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ae-field input:focus,
+.ae-field select:focus,
+.ae-field textarea:focus {
+  border-color: var(--color-black);
+}
+.ae-field input.error,
+.ae-field select.error {
+  border-color: #dc2626;
+}
+.ae-field-error {
+  font-size: 10px;
+  color: #dc2626;
+}
+
+/* ── checkbox row ────────────────────────────────────── */
+.ae-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+.ae-check-row input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* ── dynamic list (emergency / references) ───────────── */
+.ae-dyn-item {
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.ae-dyn-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.ae-dyn-item-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ae-remove-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+}
+.ae-remove-btn:hover { background: #fecaca; }
+
+.ae-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ae-add-btn:hover {
+  border-color: var(--color-black);
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+.ae-add-btn i { font-size: 13px; }
+
+/* ── add-later box ───────────────────────────────────── */
+.ae-later-box {
+  border: 1px dashed #d97706;
+  border-radius: 6px;
+  padding: 14px 16px;
+  background: #fffbeb;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ae-later-box-text p {
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 2px;
+}
+.ae-later-box-text span {
+  font-size: 10px;
+  color: #b45309;
+}
+.ae-later-btn {
+  padding: 6px 14px;
+  border: 1px solid #d97706;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.ae-later-btn:hover { background: #fde68a; }
+
+/* ── navigation buttons ──────────────────────────────── */
+.ae-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  gap: 8px;
+}
+.ae-nav-left, .ae-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── continue dialog ─────────────────────────────────── */
+.ae-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.ae-dialog {
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.ae-dialog h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.ae-dialog p {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.ae-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── emp code row ────────────────────────────────────── */
+.ae-empcode-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+.ae-empcode-btn {
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+.ae-empcode-btn:hover {
+  background: var(--color-active);
+  color: var(--color-text);
+}
+
+/* ── boolean toggle (PF, ESIC, PT) ──────────────────── */
+.ae-bool-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: start;
+}

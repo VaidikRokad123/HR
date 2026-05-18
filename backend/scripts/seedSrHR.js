@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
 
 import UserModel from '../models/UserModel.js';
 import EmployeePersonalModel from '../models/EmployeePersonalModel.js';
 import EmployeeProfessionalModel from '../models/EmployeeProfessionalModel.js';
 
-dotenv.config();
+dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
 
 const seedSrHR = async () => {
   try {

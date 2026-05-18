@@ -10,7 +10,12 @@ export const verifyToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
-      console.error("❌ Caught Error:", error);
+    if (error.name === 'TokenExpiredError') {
+      // Expected behavior for expired sessions, don't dump stack trace
+      console.warn('⚠️ Token expired');
+    } else {
+      console.error('❌ JWT Verification Error:', error.message);
+    }
     return null;
   }
 };

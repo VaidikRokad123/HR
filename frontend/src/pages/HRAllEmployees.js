@@ -148,6 +148,9 @@ const HRAllEmployees = () => {
             <p>{employees.length} approved employee(s)</p>
           </div>
           <div className="page-actions">
+            <button type="button" className="btn btn-primary" onClick={() => navigate('/hr/add-employee')}>
+              <i className="ti ti-plus" aria-hidden="true" /> Add Employee
+            </button>
             <button type="button" className="btn btn-secondary" onClick={() => setIsBulkUploadOpen(true)}>
               <i className="ti ti-upload" aria-hidden="true" /> Upload
             </button>
