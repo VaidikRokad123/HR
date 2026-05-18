@@ -117,7 +117,10 @@ const AllEmployees = () => {
         return;
       }
 
-      const personalSheet = employees.map((emp) => ({
+      const response = await axios.get("/employees/export");
+      const exportData = response.data;
+
+      const allDetailsSheet = exportData.map((emp) => ({
         EmpCode: emp.user?.emp_code,
         Email: emp.user?.email,
         FullName: emp.personal?.fullName || "",
@@ -129,11 +132,8 @@ const AllEmployees = () => {
         PersonalMobile: getPersonalMobile(emp),
         PersonalEmail: emp.personal?.personalEmail || "",
         BloodGroup: emp.personal?.bloodGroup || "",
-      }));
-
-      const professionalSheet = employees.map((emp) => ({
-        EmpCode: emp.user?.emp_code,
-        FullName: emp.personal?.fullName || "",
+        Religion: emp.personal?.religion || "",
+        PhysicallyHandicapped: emp.personal?.physicallyHandicapped ? "Yes" : "No",
         Department: emp.professional?.department || "",
         Designation: getDesignation(emp),
         DateJoining: getDateJoining(emp)
@@ -144,11 +144,22 @@ const AllEmployees = () => {
         BiometricId: emp.professional?.attendanceBiometricId || "",
         LinkedIn: emp.professional?.linkedinUrl || "",
         Probation: emp.professional?.inProbation ? "Yes" : "No",
-      }));
-
-      const familySheet = employees.map((emp) => ({
-        EmpCode: emp.user?.emp_code,
-        FullName: emp.personal?.fullName || "",
+        EmploymentType: emp.professional?.employmentType || "",
+        ConfirmationDate: emp.professional?.confirmationDate
+          ? new Date(emp.professional.confirmationDate).toLocaleDateString()
+          : "",
+        WorkLocation: emp.professional?.workLocation || "",
+        WorkMobile: emp.professional?.workMobile || "",
+        LaptopAssigned: emp.professional?.laptopAssigned ? "Yes" : "No",
+        HighestQualification: emp.education?.highestQualification || "",
+        GraduationYear: emp.education?.graduationYear || "",
+        InstituteName: emp.education?.instituteName || "",
+        Reference1Name: emp.education?.references?.[0]?.name || "",
+        Reference1Phone: emp.education?.references?.[0]?.phone || "",
+        Reference1Email: emp.education?.references?.[0]?.email || "",
+        Reference2Name: emp.education?.references?.[1]?.name || "",
+        Reference2Phone: emp.education?.references?.[1]?.phone || "",
+        Reference2Email: emp.education?.references?.[1]?.email || "",
         FatherName: emp.family?.fatherName || "",
         MotherName: emp.family?.motherName || "",
         "Marital Status": emp.family?.maritalStatus || "Single",
@@ -156,11 +167,6 @@ const AllEmployees = () => {
         MarriageDate: emp.family?.marriageDate
           ? new Date(emp.family.marriageDate).toLocaleDateString()
           : "",
-      }));
-
-      const addressSheet = employees.map((emp) => ({
-        EmpCode: emp.user?.emp_code,
-        FullName: emp.personal?.fullName || "",
         CurrentStreet: emp.address?.currentAddress?.street || "",
         CurrentCity: emp.address?.currentAddress?.city || "",
         CurrentState: emp.address?.currentAddress?.state || "",
@@ -169,25 +175,30 @@ const AllEmployees = () => {
         PermCity: emp.address?.permanentAddress?.city || "",
         PermState: emp.address?.permanentAddress?.state || "",
         PermPincode: emp.address?.permanentAddress?.pincode || "",
-      }));
-
-      const bankSheet = employees.map((emp) => ({
-        EmpCode: emp.user?.emp_code,
-        FullName: emp.personal?.fullName || "",
         CompanyOpensBank: emp.bank?.companyOpensBank ? "Yes" : "No",
         PANNumber: emp.bank?.panNumber || "",
         AadharNumber: emp.bank?.aadharNumber || "",
+        PassportNumber: emp.bank?.passportNumber || "",
+        DrivingLicence: emp.bank?.drivingLicence || "",
+        VoterIdNumber: emp.bank?.voterIdNumber || "",
         BankNameBranch: getBankName(emp),
         Branch: emp.bank?.branch || "",
         AccountNumber: getAccountNumber(emp),
         IFSCCode: getIfscCode(emp),
         SalaryAccountNumber: emp.bank?.salaryAccountNumber || "",
         SalaryIFSC: emp.bank?.salaryIfsc || "",
-      }));
-
-      const emergencySheet = employees.map((emp) => ({
-        EmpCode: emp.user?.emp_code,
-        FullName: emp.personal?.fullName || "",
+        AccountHolderName: emp.payroll?.accountHolderName || emp.bank?.accountHolderName || "",
+        GrossSalary: emp.payroll?.gross || "",
+        CTC: emp.payroll?.ctc || "",
+        PFApplicable: emp.payroll?.pfApplicable ? "Yes" : "No",
+        PFNumber: emp.payroll?.pfNumber || "",
+        UANNumber: emp.payroll?.uanNumber || "",
+        ESICApplicable: emp.payroll?.esicApplicable ? "Yes" : "No",
+        ESICNumber: emp.payroll?.esicNumber || "",
+        PTApplicable: emp.payroll?.ptApplicable ? "Yes" : "No",
+        PTNumber: emp.payroll?.ptNumber || "",
+        TDSRegime: emp.payroll?.tdsRegime || "",
+        Form12BB: emp.payroll?.form12bb || "",
         PrimaryContactName: emp.emergency?.emergencyContact1?.name || "",
         PrimaryContactRelationship:
           emp.emergency?.emergencyContact1?.relationship || "",
@@ -201,33 +212,8 @@ const AllEmployees = () => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(
         wb,
-        XLSX.utils.json_to_sheet(personalSheet),
-        "Personal",
-      );
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(professionalSheet),
-        "Professional",
-      );
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(familySheet),
-        "Family",
-      );
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(addressSheet),
-        "Address",
-      );
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(bankSheet),
-        "Bank",
-      );
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.json_to_sheet(emergencySheet),
-        "Emergency",
+        XLSX.utils.json_to_sheet(allDetailsSheet),
+        "EmployeeDetails",
       );
 
       XLSX.writeFile(wb, "Saeculum_Employees_Data.xlsx");
@@ -325,8 +311,8 @@ const AllEmployees = () => {
                     <td>
                       {getDateJoining(employee)
                         ? new Date(
-                            getDateJoining(employee),
-                          ).toLocaleDateString()
+                          getDateJoining(employee),
+                        ).toLocaleDateString()
                         : "N/A"}
                     </td>
                     <td>

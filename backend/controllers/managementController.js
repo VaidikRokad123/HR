@@ -286,6 +286,7 @@ const buildEmployeeResponse = async (user, includeSensitive = false) => {
       createdAt: user.createdAt,
     },
     personal: sections.personal,
+    education: sections.education,
     family: sections.family,
     address: sections.address,
     emergency: sections.emergency,
@@ -617,6 +618,7 @@ export const bulkUploadEmployees = async (req, res) => {
           bank = {},
           emergency = {},
           payroll = {},
+          education = {},
         } = empData;
         let email =
           userData.email ||
@@ -654,6 +656,7 @@ export const bulkUploadEmployees = async (req, res) => {
           ...bank,
           ...payroll,
           ...emergency,
+          ...education,
           emp_code: user.emp_code,
           userId: user._id,
           personalEmail: personal.personalEmail || email,

@@ -394,11 +394,13 @@
 }
 
 .bg-personal,
+.bg-education,
 .bg-professional,
 .bg-family,
 .bg-address,
 .bg-bank,
 .bg-emergency,
+.bg-payroll,
 .bg-actions {
   background: #f5f5f5;
   color: var(--color-text-secondary);

@@ -3,46 +3,84 @@ import * as XLSX from "xlsx";
 import axios from "axios";
 import "./BulkUploadModal.css";
 
-const toEmployeeModelPayload = (emp) => ({
-  emp_code: emp.emp_code,
-  user: emp.user,
-  personal: {
-    ...emp.personal,
-    personalMobile: emp.personal?.personalMobile || emp.personal?.mobile || "",
-  },
-  professional: {
-    ...emp.professional,
-    designation:
-      emp.professional?.designation || emp.professional?.jobTitle || "",
-    dateJoining:
-      emp.professional?.dateJoining || emp.professional?.dateJoined || "",
-    officialEmail:
-      emp.professional?.officialEmail || emp.professional?.workEmail || "",
-    probationMonths:
-      emp.professional?.probationMonths ?? emp.professional?.probationDuration,
-  },
-  family: emp.family,
-  address: emp.address,
-  bank: {
-    ...emp.bank,
-    bankNameBranch: emp.bank?.bankNameBranch || emp.bank?.bankName || "",
-    accountNumber:
-      emp.bank?.accountNumber || emp.bank?.personalAccountNumber || "",
-    ifscCode: emp.bank?.ifscCode || emp.bank?.personalIfsc || "",
-  },
-  emergency: {
-    emergencyContacts: [
-      emp.emergency?.emergencyContact1,
-      emp.emergency?.emergencyContact2,
-    ]
-      .filter(Boolean)
-      .map((contact) => ({
-        name: contact.name || "",
-        relationship: contact.relationship || "",
-        phone: contact.phone || contact.mobile || "",
-      })),
-  },
-});
+const toEmployeeModelPayload = (emp) => {
+  const refs = [];
+  if (emp.education?.reference1Name) {
+    refs.push({
+      name: emp.education.reference1Name,
+      phone: emp.education.reference1Phone || "",
+      email: emp.education.reference1Email || "",
+    });
+  }
+  if (emp.education?.reference2Name) {
+    refs.push({
+      name: emp.education.reference2Name,
+      phone: emp.education.reference2Phone || "",
+      email: emp.education.reference2Email || "",
+    });
+  }
+
+  return {
+    emp_code: emp.emp_code,
+    user: emp.user,
+    personal: {
+      ...emp.personal,
+      personalMobile: emp.personal?.personalMobile || emp.personal?.mobile || "",
+    },
+    education: {
+      highestQualification: emp.education?.highestQualification || "",
+      graduationYear: emp.education?.graduationYear || "",
+      instituteName: emp.education?.instituteName || "",
+      references: refs,
+    },
+    professional: {
+      ...emp.professional,
+      designation:
+        emp.professional?.designation || emp.professional?.jobTitle || "",
+      dateJoining:
+        emp.professional?.dateJoining || emp.professional?.dateJoined || "",
+      officialEmail:
+        emp.professional?.officialEmail || emp.professional?.workEmail || "",
+      probationMonths:
+        emp.professional?.probationMonths ?? emp.professional?.probationDuration,
+    },
+    family: emp.family,
+    address: emp.address,
+    bank: {
+      ...emp.bank,
+      bankNameBranch: emp.bank?.bankNameBranch || emp.bank?.bankName || "",
+      accountNumber:
+        emp.bank?.accountNumber || emp.bank?.personalAccountNumber || "",
+      ifscCode: emp.bank?.ifscCode || emp.bank?.personalIfsc || "",
+    },
+    payroll: {
+      gross: emp.payroll?.gross || "",
+      ctc: emp.payroll?.ctc || "",
+      pfApplicable: emp.payroll?.pfApplicable === true,
+      pfNumber: emp.payroll?.pfNumber || "",
+      uanNumber: emp.payroll?.uanNumber || "",
+      esicApplicable: emp.payroll?.esicApplicable === true,
+      esicNumber: emp.payroll?.esicNumber || "",
+      ptApplicable: emp.payroll?.ptApplicable === true,
+      ptNumber: emp.payroll?.ptNumber || "",
+      tdsApplicable: emp.payroll?.tdsApplicable === true,
+      tdsRegime: emp.payroll?.tdsRegime || "",
+      form12bb: emp.payroll?.form12bb || "",
+    },
+    emergency: {
+      emergencyContacts: [
+        emp.emergency?.emergencyContact1,
+        emp.emergency?.emergencyContact2,
+      ]
+        .filter(Boolean)
+        .map((contact) => ({
+          name: contact.name || "",
+          relationship: contact.relationship || "",
+          phone: contact.phone || contact.mobile || "",
+        })),
+    },
+  };
+};
 
 const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   const [activeTab, setActiveTab] = useState("upload");
@@ -105,6 +143,12 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
         const emergencyData = workbook.Sheets["Emergency"]
           ? XLSX.utils.sheet_to_json(workbook.Sheets["Emergency"])
           : [];
+        const educationData = workbook.Sheets["Education"]
+          ? XLSX.utils.sheet_to_json(workbook.Sheets["Education"])
+          : [];
+        const payrollData = workbook.Sheets["Payroll"]
+          ? XLSX.utils.sheet_to_json(workbook.Sheets["Payroll"])
+          : [];
 
         let formattedData = [];
 
@@ -149,6 +193,19 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               mobile: row.PersonalMobile || row.Mobile || row.Phone || "",
               personalEmail: row.PersonalEmail || row.Email || "",
               bloodGroup: row.BloodGroup || "",
+              religion: row.Religion || "",
+              physicallyHandicapped: row.PhysicallyHandicapped || "No",
+            },
+            education: {
+              highestQualification: row.HighestQualification || "",
+              graduationYear: row.GraduationYear || "",
+              instituteName: row.InstituteName || "",
+              reference1Name: row.Reference1Name || "",
+              reference1Phone: row.Reference1Phone || "",
+              reference1Email: row.Reference1Email || "",
+              reference2Name: row.Reference2Name || "",
+              reference2Phone: row.Reference2Phone || "",
+              reference2Email: row.Reference2Email || "",
             },
             professional: {
               department: row.Department || "",
@@ -159,6 +216,11 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               attendanceBiometricId: row.BiometricId || "",
               linkedinUrl: row.LinkedIn || "",
               inProbation: row.Probation === "Yes",
+              employmentType: row.EmploymentType || "",
+              confirmationDate: processDate(row.ConfirmationDate),
+              workLocation: row.WorkLocation || "",
+              workMobile: row.WorkMobile || "",
+              laptopAssigned: row.LaptopAssigned || "",
             },
             family: {
               fatherName: row.FatherName || "",
@@ -188,11 +250,26 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               panNumber: row.PANNumber || "",
               aadharNumber: row.AadharNumber || "",
               bankName: row.BankNameBranch || row.BankName || "",
+              accountHolderName: row.AccountHolderName || "",
               branch: row.Branch || "",
               personalAccountNumber: row.AccountNumber || row.PersonalAccountNumber || "",
               personalIfsc: row.IFSCCode || row.PersonalIFSC || "",
               salaryAccountNumber: row.SalaryAccountNumber || "",
               salaryIfsc: row.SalaryIFSC || "",
+            },
+            payroll: {
+              gross: row.Gross || "",
+              ctc: row.CTC || "",
+              pfApplicable: row.PFApplicable === "Yes",
+              pfNumber: row.PFNumber || "",
+              uanNumber: row.UANNumber || "",
+              esicApplicable: row.ESICApplicable === "Yes",
+              esicNumber: row.ESICNumber || "",
+              ptApplicable: row.PTApplicable === "Yes",
+              ptNumber: row.PTNumber || "",
+              tdsApplicable: row.TDSApplicable === "Yes",
+              tdsRegime: row.TDSRegime || "",
+              form12bb: row.Form12BB || "",
             },
             emergency: {
               emergencyContact1: { name: row.PrimaryContactName || "", relationship: row.PrimaryContactRelationship || "", mobile: row.PrimaryContactMobile || "" },
@@ -214,6 +291,19 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                   mobile: "",
                   personalEmail: "",
                   bloodGroup: "",
+                  religion: "",
+                  physicallyHandicapped: "No",
+                },
+                education: {
+                  highestQualification: "",
+                  graduationYear: "",
+                  instituteName: "",
+                  reference1Name: "",
+                  reference1Phone: "",
+                  reference1Email: "",
+                  reference2Name: "",
+                  reference2Phone: "",
+                  reference2Email: "",
                 },
                 professional: {
                   department: "",
@@ -224,6 +314,11 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                   attendanceBiometricId: "",
                   linkedinUrl: "",
                   inProbation: false,
+                  employmentType: "",
+                  confirmationDate: "",
+                  workLocation: "",
+                  workMobile: "",
+                  laptopAssigned: "",
                 },
                 family: {
                   fatherName: "",
@@ -253,11 +348,26 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                   panNumber: "",
                   aadharNumber: "",
                   bankName: "",
+                  accountHolderName: "",
                   branch: "",
                   personalAccountNumber: "",
                   personalIfsc: "",
                   salaryAccountNumber: "",
                   salaryIfsc: "",
+                },
+                payroll: {
+                  gross: "",
+                  ctc: "",
+                  pfApplicable: false,
+                  pfNumber: "",
+                  uanNumber: "",
+                  esicApplicable: false,
+                  esicNumber: "",
+                  ptApplicable: false,
+                  ptNumber: "",
+                  tdsApplicable: false,
+                  tdsRegime: "",
+                  form12bb: "",
                 },
                 emergency: {
                   emergencyContact1: { name: "", relationship: "", mobile: "" },
@@ -296,6 +406,8 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               mobile: row.PersonalMobile || row.Mobile || row.Phone || "",
               personalEmail: row.PersonalEmail || row.Email || "",
               bloodGroup: row.BloodGroup || "",
+              religion: row.Religion || "",
+              physicallyHandicapped: row.PhysicallyHandicapped || "",
             };
           });
 
@@ -316,6 +428,11 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               attendanceBiometricId: row.BiometricId || "",
               linkedinUrl: row.LinkedIn || "",
               inProbation: row.Probation === "Yes",
+              employmentType: row.EmploymentType || "",
+              confirmationDate: processDate(row.ConfirmationDate),
+              workLocation: row.WorkLocation || "",
+              workMobile: row.WorkMobile || "",
+              laptopAssigned: row.LaptopAssigned || "",
             };
           });
 
@@ -357,6 +474,25 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             };
           });
 
+          educationData.forEach((row, idx) => {
+            const key = getRowKey(row, idx);
+            const emp = getOrCreateEmp(key);
+            if (row.EmpCode) emp.emp_code = row.EmpCode;
+            emp.education = {
+              ...emp.education,
+              highestQualification: row.HighestQualification || "",
+              graduationYear: row.GraduationYear || "",
+              instituteName: row.InstituteName || "",
+              previousEmployer: row.PreviousEmployer || "",
+              reference1Name: row.Reference1Name || "",
+              reference1Phone: row.Reference1Phone || "",
+              reference1Email: row.Reference1Email || "",
+              reference2Name: row.Reference2Name || "",
+              reference2Phone: row.Reference2Phone || "",
+              reference2Email: row.Reference2Email || "",
+            };
+          });
+
           bankData.forEach((row, idx) => {
             const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
@@ -367,12 +503,34 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               panNumber: row.PANNumber || "",
               aadharNumber: row.AadharNumber || "",
               bankName: row.BankNameBranch || row.BankName || "",
+              accountHolderName: row.AccountHolderName || "",
               branch: row.Branch || "",
               personalAccountNumber:
                 row.AccountNumber || row.PersonalAccountNumber || "",
               personalIfsc: row.IFSCCode || row.PersonalIFSC || "",
               salaryAccountNumber: row.SalaryAccountNumber || "",
               salaryIfsc: row.SalaryIFSC || "",
+            };
+          });
+
+          payrollData.forEach((row, idx) => {
+            const key = getRowKey(row, idx);
+            const emp = getOrCreateEmp(key);
+            if (row.EmpCode) emp.emp_code = row.EmpCode;
+            emp.payroll = {
+              ...emp.payroll,
+              gross: row.Gross || "",
+              ctc: row.CTC || "",
+              pfApplicable: row.PFApplicable === "Yes",
+              pfNumber: row.PFNumber || "",
+              uanNumber: row.UANNumber || "",
+              esicApplicable: row.ESICApplicable === "Yes",
+              esicNumber: row.ESICNumber || "",
+              ptApplicable: row.PTApplicable === "Yes",
+              ptNumber: row.PTNumber || "",
+              tdsApplicable: row.TDSApplicable === "Yes",
+              tdsRegime: row.TDSRegime || "",
+              form12bb: row.Form12BB || "",
             };
           });
 
@@ -581,10 +739,12 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                 <span className="bulk-hint-label">Multi-sheet template</span>
                 <p>
                   Sheets: <span className="hl-sheet">Personal</span>,{" "}
+                  <span className="hl-sheet">Education</span>,{" "}
                   <span className="hl-sheet">Professional</span>,{" "}
                   <span className="hl-sheet">Family</span>,{" "}
                   <span className="hl-sheet">Address</span>,{" "}
                   <span className="hl-sheet">Bank</span>,{" "}
+                  <span className="hl-sheet">Payroll</span>,{" "}
                   <span className="hl-sheet">Emergency</span> — keyed by{" "}
                   <strong>EmpCode</strong> or email.
                 </p>
@@ -664,10 +824,13 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                 <table className="bulk-review-table">
                   <thead>
                     <tr>
-                      <th colSpan="8" className="bg-personal">
+                      <th colSpan="10" className="bg-personal">
                         Personal
                       </th>
-                      <th colSpan="8" className="bg-professional">
+                      <th colSpan="9" className="bg-education">
+                        Education
+                      </th>
+                      <th colSpan="13" className="bg-professional">
                         Professional
                       </th>
                       <th colSpan="5" className="bg-family">
@@ -676,8 +839,11 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                       <th colSpan="10" className="bg-address">
                         Address
                       </th>
-                      <th colSpan="9" className="bg-bank">
+                      <th colSpan="10" className="bg-bank">
                         Bank
+                      </th>
+                      <th colSpan="12" className="bg-payroll">
+                        Payroll
                       </th>
                       <th colSpan="6" className="bg-emergency">
                         Emergency
@@ -698,6 +864,19 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                       <th>Mobile</th>
                       <th>Personal Email</th>
                       <th>Blood Group</th>
+                      <th>Religion</th>
+                      <th>Physically Handicapped</th>
+
+                      {/* Education */}
+                      <th>Highest Qualification</th>
+                      <th>Graduation Year</th>
+                      <th>Institute Name</th>
+                      <th>Ref1 Name</th>
+                      <th>Ref1 Phone</th>
+                      <th>Ref1 Email</th>
+                      <th>Ref2 Name</th>
+                      <th>Ref2 Phone</th>
+                      <th>Ref2 Email</th>
 
                       {/* Professional */}
                       <th>Department</th>
@@ -708,6 +887,11 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                       <th>Biometric ID</th>
                       <th>LinkedIn</th>
                       <th>In Probation</th>
+                      <th>Employment Type</th>
+                      <th>Confirmation Date</th>
+                      <th>Work Location</th>
+                      <th>Work Mobile</th>
+                      <th>Laptop Assigned</th>
 
                       {/* Family */}
                       <th>Father Name</th>
@@ -733,11 +917,26 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                       <th>PAN</th>
                       <th>Aadhar</th>
                       <th>Bank Name</th>
+                      <th>Account Holder Name</th>
                       <th>Branch</th>
                       <th>Personal Acc</th>
                       <th>Personal IFSC</th>
                       <th>Salary Acc</th>
                       <th>Salary IFSC</th>
+
+                      {/* Payroll */}
+                      <th>Gross</th>
+                      <th>CTC</th>
+                      <th>PF Applicable</th>
+                      <th>PF Number</th>
+                      <th>UAN Number</th>
+                      <th>ESIC Applicable</th>
+                      <th>ESIC Number</th>
+                      <th>PT Applicable</th>
+                      <th>PT Number</th>
+                      <th>TDS Applicable</th>
+                      <th>TDS Regime</th>
+                      <th>Form 12BB</th>
 
                       {/* Emergency */}
                       <th>E1 Name</th>
@@ -878,6 +1077,187 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                             style={{ width: "60px" }}
                           />
                         </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.personal.religion}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "personal",
+                                "religion",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "80px" }}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={emp.personal.physicallyHandicapped}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "personal",
+                                "physicallyHandicapped",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "80px" }}
+                          >
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                        </td>
+
+                        {/* Education */}
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.highestQualification}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "highestQualification",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "110px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.graduationYear}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "graduationYear",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "70px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.instituteName}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "instituteName",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "110px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.reference1Name}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "reference1Name",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.reference1Phone}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "reference1Phone",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="email"
+                            value={emp.education.reference1Email}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "reference1Email",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "130px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.reference2Name}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "reference2Name",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.education.reference2Phone}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "reference2Phone",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="email"
+                            value={emp.education.reference2Email}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "education",
+                                "reference2Email",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "130px" }}
+                          />
+                        </td>
 
                         {/* Professional */}
                         <td>
@@ -1005,6 +1385,101 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                               )
                             }
                           />
+                        </td>
+                        <td>
+                          <select
+                            value={emp.professional.employmentType}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "professional",
+                                "employmentType",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          >
+                            <option value="">Select</option>
+                            <option value="Permanent">Permanent</option>
+                            <option value="Temporary">Temporary</option>
+                            <option value="Contract Base">Contract Base</option>
+                            <option value="Probation">Probation</option>
+                            <option value="Internship">Internship</option>
+                            <option value="Trainee">Trainee</option>
+                            <option value="Notice period">Notice period</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="date"
+                            value={emp.professional.confirmationDate}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "professional",
+                                "confirmationDate",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "110px" }}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={emp.professional.workLocation}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "professional",
+                                "workLocation",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "80px" }}
+                          >
+                            <option value="">Select</option>
+                            <option value="Office">Office</option>
+                            <option value="Remote">Remote</option>
+                            <option value="Hybrid">Hybrid</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.professional.workMobile}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "professional",
+                                "workMobile",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={emp.professional.laptopAssigned}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "professional",
+                                "laptopAssigned",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "80px" }}
+                          >
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
                         </td>
 
                         {/* Family */}
@@ -1331,6 +1806,22 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                         <td>
                           <input
                             type="text"
+                            value={emp.bank.accountHolderName}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                index,
+                                "bank",
+                                "accountHolderName",
+                                e.target.value,
+                              )
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
                             value={emp.bank.branch}
                             onChange={(e) =>
                               handleFieldChange(
@@ -1406,6 +1897,135 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                             }
                             className="bulk-cell-input-small"
                             style={{ width: "100px" }}
+                          />
+                        </td>
+
+                        {/* Payroll */}
+                        <td>
+                          <input
+                            type="number"
+                            value={emp.payroll.gross}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "gross", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "90px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={emp.payroll.ctc}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "ctc", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "90px" }}
+                          />
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={emp.payroll.pfApplicable}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "pfApplicable", e.target.checked)
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.payroll.pfNumber}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "pfNumber", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.payroll.uanNumber}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "uanNumber", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={emp.payroll.esicApplicable}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "esicApplicable", e.target.checked)
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.payroll.esicNumber}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "esicNumber", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={emp.payroll.ptApplicable}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "ptApplicable", e.target.checked)
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.payroll.ptNumber}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "ptNumber", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          />
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={emp.payroll.tdsApplicable}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "tdsApplicable", e.target.checked)
+                            }
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={emp.payroll.tdsRegime}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "tdsRegime", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "100px" }}
+                          >
+                            <option value="">Select</option>
+                            <option value="New Regime">New Regime</option>
+                            <option value="Old Regime">Old Regime</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={emp.payroll.form12bb}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "form12bb", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "90px" }}
                           />
                         </td>
 

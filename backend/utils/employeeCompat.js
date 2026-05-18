@@ -31,7 +31,14 @@ const NUMBER_FIELDS = new Set([
 const normalizeBlankValues = (value, key = "") => {
   if (Array.isArray(value))
     return value.map((item) => normalizeBlankValues(item));
-  if (value && typeof value === "object" && !(value instanceof Date)) {
+  // Guard: do NOT recurse into Date, ObjectId, or any object with toHexString
+  // (ObjectId instances have no enumerable entries, so they become `{}`)
+  if (
+    value &&
+    typeof value === "object" &&
+    !(value instanceof Date) &&
+    typeof value.toHexString !== "function"
+  ) {
     return Object.fromEntries(
       Object.entries(value).map(([childKey, childValue]) => [
         childKey,
@@ -93,6 +100,10 @@ export const normalizeEmployeePayload = (payload = {}, extras = {}) => {
   delete update.esic;
   delete update.tds;
   delete update.history;
+  // Never allow identity fields to flow through employee.set() —
+  // userId is an ObjectId that normalizeBlankValues would otherwise corrupt.
+  delete update._id;
+  delete update.userId;
 
   return normalizeBlankValues(dropUndefined(update));
 };
@@ -244,6 +255,7 @@ export const toCompatSections = (employee, user = {}) => {
       professional: null,
       bank: null,
       payroll: null,
+      education: null,
     };
   }
 
@@ -271,9 +283,13 @@ export const toCompatSections = (employee, user = {}) => {
       maritalStatus: plain.maritalStatus,
       religion: plain.religion,
       physicallyHandicapped: plain.physicallyHandicapped,
+    },
+    education: {
+      ...base,
       highestQualification: plain.highestQualification,
       graduationYear: plain.graduationYear,
       instituteName: plain.instituteName,
+      references: plain.references || [],
     },
     family: {
       ...base,
