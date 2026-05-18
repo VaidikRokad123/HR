@@ -1,10 +1,10 @@
-import { addressSchema, emergencyContactSchema } from "./commonSchemas.js";
+import { addressSchema, emergencyContactSchema, NA } from "./commonSchemas.js";
 
 export const contactFields = {
-  personalMobile: { type: String, required: true, trim: true },
+  personalMobile: { type: String, default: NA, trim: true },
   personalEmail: {
     type: String,
-    required: true,
+    default: NA,
     lowercase: true,
     trim: true,
   },

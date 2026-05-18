@@ -16,7 +16,7 @@ export function buildOfferLetterStructuredData(payload) {
     endDate,
     salaryType,
     salaryAmount,
-    companyName = 'SAECULUM SOLUTIONS PVT LTD',
+    companyName = 'Saeculum Solutions Pvt. Ltd.',
     signatoryName = 'HARDIKKUMAR VINZAVA',
     signatoryTitle = 'DIRECTOR'
   } = payload;

@@ -266,6 +266,40 @@ const qualifications = [
   "MCA",
 ];
 
+const NA = "not set yet";
+
+const INCOMPLETE_EMPLOYEE_OVERRIDES = {
+  // Personal incomplete: 4/6 fields filled => 67%
+  SEED011: {
+    religion: NA,
+    physicallyHandicapped: NA,
+  },
+
+  // Contact incomplete: emergency contact intentionally missing.
+  SEED012: {
+    emergencyContacts: [],
+  },
+
+  // Education incomplete: reference intentionally missing.
+  SEED013: {
+    references: [],
+  },
+
+  // Employment incomplete: some employment optional-on-form fields intentionally missing.
+  SEED014: {
+    confirmationDate: null,
+    workMobile: NA,
+    laptopAssigned: NA,
+  },
+
+  // Payroll incomplete: selected statutory/payroll details intentionally missing.
+  SEED015: {
+    pfNumber: NA,
+    uanNumber: NA,
+    form12bb: NA,
+  },
+};
+
 const buildEmployeeDocument = (seed, index, userId) => {
   const num = String(index + 1).padStart(2, "0");
   const state = stateByIndex[index % stateByIndex.length];
@@ -278,14 +312,14 @@ const buildEmployeeDocument = (seed, index, userId) => {
   const panSuffix = String(1000 + index).padStart(4, "0");
   const accountSuffix = String(100000 + index).padStart(6, "0");
 
-  const employee = new EmployeeModel({
+  const employeeData = {
     userId,
     emp_code: seed.emp_code,
     fullName: seed.fullName,
     gender: seed.gender,
     dob: new Date(seed.dob),
     maritalStatus: seed.maritalStatus,
-    religion: "not set yet",
+    religion: ["Hindu", "Muslim", "Christian", "Sikh", "Jain"][index % 5],
     physicallyHandicapped: "No",
     bloodGroup: ["O+", "A+", "B+", "AB+"][index % 4],
     personalMobile: seed.personalMobile,
@@ -307,13 +341,13 @@ const buildEmployeeDocument = (seed, index, userId) => {
     ],
     aadharNumber: `99998888${String(1000 + index)}`,
     panNumber: `SEEDA${panSuffix}Z`,
-    passportNumber: "not set yet",
-    drivingLicence: "not set yet",
-    voterIdNumber: "not set yet",
+    passportNumber: `PSEED${num}IND`,
+    drivingLicence: `GJ${num}2024SEED`,
+    voterIdNumber: `VOTERSEED${num}`,
     highestQualification: qualification,
     graduationYear: 2012 + (index % 10),
     instituteName: `${city} Institute of Technology`,
-    previousEmployer: index % 3 === 0 ? "Previous Tech Pvt Ltd" : "not set yet",
+    previousEmployer: index % 3 === 0 ? "Previous Tech Pvt Ltd" : "Fresher",
     fatherName: `Father ${num}`,
     motherName: `Mother ${num}`,
     spouseName:
@@ -333,10 +367,7 @@ const buildEmployeeDocument = (seed, index, userId) => {
       seed.employmentType === "Probation" || seed.employmentType === "Trainee"
         ? 6
         : 0,
-    confirmationDate:
-      seed.employmentType === "Permanent"
-        ? new Date(seed.dateJoining)
-        : undefined,
+    confirmationDate: new Date(seed.dateJoining),
     workLocation: seed.workLocation,
     designation: seed.designation,
     department: seed.department,
@@ -371,14 +402,21 @@ const buildEmployeeDocument = (seed, index, userId) => {
     pfNumber: `PF-SEED-${num}`,
     uanNumber: `100200300${num}`,
     esicApplicable: seed.gross <= 50000,
-    esicNumber: seed.gross <= 50000 ? `ESIC-SEED-${num}` : "not set yet",
+    esicNumber: seed.gross <= 50000 ? `ESIC-SEED-${num}` : `ESIC-EXEMPT-${num}`,
     ptApplicable: true,
     ptNumber: `PT-SEED-${num}`,
     tdsApplicable: seed.ctc >= 1000000,
-    tdsRegime: seed.ctc >= 1000000 ? "New Regime" : "not set yet",
-    form12bb: "not set yet",
+    tdsRegime: seed.ctc >= 1000000 ? "New Regime" : "Old Regime",
+    form12bb: `FORM12BB-SEED-${num}`,
     pendingSections: [],
-  });
+  };
+
+  Object.assign(
+    employeeData,
+    INCOMPLETE_EMPLOYEE_OVERRIDES[seed.emp_code] || {},
+  );
+
+  const employee = new EmployeeModel(employeeData);
 
   appendPayrollHistoryIfChanged(
     employee,

@@ -89,7 +89,14 @@ function calculateAge(dob) {
 }
 
 function isFilled(value) {
-  if (Array.isArray(value)) return value.length > 0;
+  if (Array.isArray(value)) return value.some(isFilled);
+  if (value instanceof Date) return !Number.isNaN(value.getTime());
+  if (value && typeof value === 'object') {
+    // Mongoose documents/subdocuments are complex objects. Convert to a plain
+    // object before checking to avoid infinite recursion on internal properties.
+    const target = value.toObject ? value.toObject() : value;
+    return Object.values(target).some(isFilled);
+  }
   if (typeof value === "boolean") return true;
   return value !== undefined && value !== null && value !== "" && value !== NA;
 }

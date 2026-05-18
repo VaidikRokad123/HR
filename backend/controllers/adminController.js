@@ -213,7 +213,7 @@ export const createEmployee = async (req, res) => {
     });
 
     const employee = new EmployeeModel(
-      buildEmployeePayload(payload, user._id, emp_code, email),
+      buildEmployeePayload(payload, user._id.toString(), emp_code, email),
     );
     appendPayrollHistoryIfChanged(employee, payload, "initial setup");
     await employee.save();
@@ -274,7 +274,7 @@ export const updateEmployee = async (req, res) => {
         emp_code: user.emp_code,
       });
 
-    employee.set(buildEmployeePayload(payload, user._id, user.emp_code, email));
+    employee.set(buildEmployeePayload(payload, user._id.toString(), user.emp_code, email));
     appendPayrollHistoryIfChanged(employee, payload);
     await employee.save();
 

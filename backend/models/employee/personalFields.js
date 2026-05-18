@@ -1,14 +1,14 @@
 import { NA } from "./commonSchemas.js";
 
 export const personalFields = {
-  fullName: { type: String, required: true, trim: true },
-  dob: { type: Date, required: true },
+  fullName: { type: String, default: NA, trim: true },
+  dob: { type: Date, default: null },
   age: { type: Number },
-  gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
+  gender: { type: String, enum: ["Male", "Female", "Other", NA], default: NA },
   maritalStatus: {
     type: String,
     enum: ["Single", "Married", "Divorced", "Engaged", NA],
-    required: true,
+    default: NA,
   },
   religion: { type: String, default: NA, trim: true },
   physicallyHandicapped: {

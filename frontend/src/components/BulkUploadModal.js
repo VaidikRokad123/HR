@@ -108,6 +108,20 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
 
         let formattedData = [];
 
+        const processDate = (dateVal) => {
+          if (!dateVal) return "";
+          if (typeof dateVal === "number") {
+            const date = new Date((dateVal - (25567 + 2)) * 86400 * 1000);
+            return date.toISOString().split("T")[0];
+          }
+          try {
+            return new Date(dateVal).toISOString().split("T")[0];
+          } catch (err) {
+            console.error("❌ Caught Error:", err);
+            return dateVal;
+          }
+        };
+
         if (
           personalData.length === 0 &&
           workbook.SheetNames.length > 0 &&
@@ -119,6 +133,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           );
 
           formattedData = rawData.map((row) => ({
+            emp_code: row.EmpCode || "",
             user: {
               email:
                 row.Email ||
@@ -130,7 +145,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             personal: {
               fullName: row.FullName || row.Name || "",
               gender: row.Gender || "",
-              dob: row.DOB || "",
+              dob: processDate(row.DOB),
               mobile: row.PersonalMobile || row.Mobile || row.Phone || "",
               personalEmail: row.PersonalEmail || row.Email || "",
               bloodGroup: row.BloodGroup || "",
@@ -138,8 +153,50 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             professional: {
               department: row.Department || "",
               jobTitle: row.Designation || row.JobTitle || "",
-              dateJoined: row.DateJoining || row.DateJoined || "",
+              dateJoined: processDate(row.DateJoining || row.DateJoined),
               workEmail: row.OfficialEmail || row.WorkEmail || "",
+              reportingManager: row.ReportingManager || "",
+              attendanceBiometricId: row.BiometricId || "",
+              linkedinUrl: row.LinkedIn || "",
+              inProbation: row.Probation === "Yes",
+            },
+            family: {
+              fatherName: row.FatherName || "",
+              motherName: row.MotherName || "",
+              maritalStatus: row["Marital Status"] || row.MaritalStatus || "Single",
+              spouseName: row.SpouseName || "",
+              marriageDate: processDate(row.MarriageDate),
+            },
+            address: {
+              currentAddress: {
+                street: row.CurrentStreet || "",
+                city: row.CurrentCity || "",
+                state: row.CurrentState || "",
+                pincode: row.CurrentPincode || "",
+                country: row.CurrentCountry || "India",
+              },
+              permanentAddress: {
+                street: row.PermStreet || "",
+                city: row.PermCity || "",
+                state: row.PermState || "",
+                pincode: row.PermPincode || "",
+                country: row.PermCountry || "India",
+              },
+            },
+            bank: {
+              companyOpensBank: row.CompanyOpensBank === "Yes",
+              panNumber: row.PANNumber || "",
+              aadharNumber: row.AadharNumber || "",
+              bankName: row.BankNameBranch || row.BankName || "",
+              branch: row.Branch || "",
+              personalAccountNumber: row.AccountNumber || row.PersonalAccountNumber || "",
+              personalIfsc: row.IFSCCode || row.PersonalIFSC || "",
+              salaryAccountNumber: row.SalaryAccountNumber || "",
+              salaryIfsc: row.SalaryIFSC || "",
+            },
+            emergency: {
+              emergencyContact1: { name: row.PrimaryContactName || "", relationship: row.PrimaryContactRelationship || "", mobile: row.PrimaryContactMobile || "" },
+              emergencyContact2: { name: row.SecondaryContactName || "", relationship: row.SecondaryContactRelationship || "", mobile: row.SecondaryContactMobile || "" },
             },
           }));
         } else {
@@ -211,23 +268,16 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             return employeesMap.get(key);
           };
 
-          const processDate = (dateVal) => {
-            if (!dateVal) return "";
-            if (typeof dateVal === "number") {
-              const date = new Date((dateVal - (25567 + 2)) * 86400 * 1000);
-              return date.toISOString().split("T")[0];
-            }
-            try {
-              return new Date(dateVal).toISOString().split("T")[0];
-            } catch (err) {
-              console.error("❌ Caught Error:", err);
-              return dateVal;
-            }
-          };
+          const getRowKey = (row, idx) =>
+            row.EmpCode ||
+            row.Email ||
+            row.PersonalEmail ||
+            row.OfficialEmail ||
+            row.WorkEmail ||
+            `temp_${idx}`;
 
           personalData.forEach((row, idx) => {
-            const key =
-              row.EmpCode || row.Email || row.PersonalEmail || `temp_${idx}`;
+            const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             if (!emp.user.email)
@@ -250,12 +300,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           });
 
           professionalData.forEach((row, idx) => {
-            const key =
-              row.EmpCode ||
-              row.Email ||
-              row.OfficialEmail ||
-              row.WorkEmail ||
-              `temp_${idx}`;
+            const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             if (!emp.user.email)
@@ -275,7 +320,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           });
 
           familyData.forEach((row, idx) => {
-            const key = row.EmpCode || `temp_${idx}`;
+            const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             emp.family = {
@@ -290,7 +335,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           });
 
           addressData.forEach((row, idx) => {
-            const key = row.EmpCode || `temp_${idx}`;
+            const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             emp.address = {
@@ -313,7 +358,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           });
 
           bankData.forEach((row, idx) => {
-            const key = row.EmpCode || `temp_${idx}`;
+            const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             emp.bank = {
@@ -332,7 +377,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
           });
 
           emergencyData.forEach((row, idx) => {
-            const key = row.EmpCode || `temp_${idx}`;
+            const key = getRowKey(row, idx);
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             emp.emergency = {

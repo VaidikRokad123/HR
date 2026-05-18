@@ -11,6 +11,41 @@ export const employeeQueryForUser = (user) =>
     ? { $or: [{ userId: user._id }, { emp_code: user.emp_code }] }
     : { userId: user?._id };
 
+const DATE_FIELDS = new Set([
+  "dob",
+  "dateJoining",
+  "dateJoined",
+  "exitDate",
+  "confirmationDate",
+  "marriageDate",
+]);
+const NUMBER_FIELDS = new Set([
+  "age",
+  "graduationYear",
+  "probationMonths",
+  "probationDuration",
+  "gross",
+  "ctc",
+]);
+
+const normalizeBlankValues = (value, key = "") => {
+  if (Array.isArray(value))
+    return value.map((item) => normalizeBlankValues(item));
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([childKey, childValue]) => [
+        childKey,
+        normalizeBlankValues(childValue, childKey),
+      ]),
+    );
+  }
+  if (value === "") {
+    if (DATE_FIELDS.has(key) || NUMBER_FIELDS.has(key)) return null;
+    return NA;
+  }
+  return value;
+};
+
 export const normalizeEmployeePayload = (payload = {}, extras = {}) => {
   const update = { ...payload, ...extras };
 
@@ -59,7 +94,7 @@ export const normalizeEmployeePayload = (payload = {}, extras = {}) => {
   delete update.tds;
   delete update.history;
 
-  return dropUndefined(update);
+  return normalizeBlankValues(dropUndefined(update));
 };
 
 export const moduleDataToEmployeeUpdate = (module, data = {}) => {

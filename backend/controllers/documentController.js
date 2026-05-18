@@ -51,7 +51,7 @@ function pickKnownOfferValues(employee, override = {}) {
       ? new Date(professional.dateJoined).toISOString().slice(0, 10)
       : "",
     salaryAmount: payroll.gross || payroll.ctc || "",
-    companyName: process.env.COMPANY_NAME || "SAECULUM SOLUTIONS PVT LTD",
+    companyName: process.env.COMPANY_NAME || "Saeculum Solutions Pvt. Ltd.",
     signatoryName: process.env.DOCUMENT_SIGNATORY_NAME || "HARDIKKUMAR VINZAVA",
     signatoryTitle: process.env.DOCUMENT_SIGNATORY_TITLE || "DIRECTOR",
     ...override,

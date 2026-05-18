@@ -49,7 +49,11 @@ const buildSensitiveOtpEmail = ({ otp, employeeName, empCode }) => `
 `;
 
 const isFilledValue = (value) => {
-  if (Array.isArray(value)) return value.length > 0;
+  if (Array.isArray(value)) return value.some(isFilledValue);
+  if (value instanceof Date) return !Number.isNaN(value.getTime());
+  if (value && typeof value === "object") {
+    return Object.values(value).some(isFilledValue);
+  }
   if (typeof value === "boolean") return true;
   return (
     value !== undefined &&
@@ -68,6 +72,59 @@ const countFilledFields = (source, fields) =>
     0,
   );
 
+const COMPLETION_FIELD_LABELS = {
+  fullName: "Full name",
+  dob: "Date of birth",
+  gender: "Gender",
+  maritalStatus: "Marital status",
+  religion: "Religion",
+  physicallyHandicapped: "Physically handicapped",
+  bloodGroup: "Blood group",
+  personalMobile: "Personal mobile",
+  personalEmail: "Personal email",
+  "currentAddress.street": "Current address street",
+  "currentAddress.city": "Current address city",
+  "currentAddress.state": "Current address state",
+  "currentAddress.pincode": "Current address pincode",
+  "permanentAddress.street": "Permanent address street",
+  "permanentAddress.city": "Permanent address city",
+  "permanentAddress.state": "Permanent address state",
+  "permanentAddress.pincode": "Permanent address pincode",
+  emergencyContacts: "Emergency contact",
+  aadharNumber: "Aadhaar number",
+  panNumber: "PAN number",
+  highestQualification: "Highest qualification",
+  graduationYear: "Graduation year",
+  instituteName: "Institute name",
+  references: "Reference",
+  dateJoining: "Date joining",
+  employmentType: "Employment type",
+  probationMonths: "Probation months",
+  confirmationDate: "Confirmation date",
+  workLocation: "Work location",
+  designation: "Designation",
+  department: "Department",
+  reportingManager: "Reporting manager",
+  officialEmail: "Official email",
+  workMobile: "Work mobile",
+  laptopAssigned: "Laptop assigned",
+  gross: "Gross salary",
+  ctc: "CTC",
+  accountHolderName: "Account holder name",
+  bankNameBranch: "Bank name & branch",
+  accountNumber: "Account number",
+  ifscCode: "IFSC code",
+  pfApplicable: "PF applicable",
+  pfNumber: "PF number",
+  uanNumber: "UAN number",
+  esicApplicable: "ESIC applicable",
+  esicNumber: "ESIC number",
+  ptApplicable: "PT applicable",
+  ptNumber: "PT number",
+  tdsRegime: "TDS regime",
+  form12bb: "Form 12BB",
+};
+
 const MODEL_PROGRESS_SECTIONS = [
   {
     key: "personal",
@@ -79,6 +136,7 @@ const MODEL_PROGRESS_SECTIONS = [
       "maritalStatus",
       "religion",
       "physicallyHandicapped",
+      "bloodGroup",
     ],
   },
   {
@@ -156,7 +214,13 @@ const MODEL_PROGRESS_SECTIONS = [
 const buildCompletionSnapshot = (employee = {}) => {
   const source = employee?.toObject ? employee.toObject() : employee || {};
   const sectionProgress = MODEL_PROGRESS_SECTIONS.map((section) => {
-    const filledFields = countFilledFields(source, section.fields);
+    const missingFields = section.fields
+      .filter((path) => !isFilledValue(getNestedValue(source, path)))
+      .map((path) => ({
+        field: path,
+        label: COMPLETION_FIELD_LABELS[path] || path,
+      }));
+    const filledFields = section.fields.length - missingFields.length;
     const percentage = section.fields.length
       ? Math.round((filledFields / section.fields.length) * 100)
       : 0;
@@ -166,6 +230,7 @@ const buildCompletionSnapshot = (employee = {}) => {
       percentage,
       filledFields,
       totalFields: section.fields.length,
+      missingFields,
     };
   });
   const totalFields = sectionProgress.reduce(
@@ -179,14 +244,21 @@ const buildCompletionSnapshot = (employee = {}) => {
   const completionPercentage = totalFields
     ? Math.round((filledFields / totalFields) * 100)
     : 0;
-  const missingSections = sectionProgress
-    .filter((section) => section.percentage < 100)
-    .map((section) => section.label);
+  const incompleteSections = sectionProgress.filter(
+    (section) => section.percentage < 100,
+  );
+  const missingSections = incompleteSections.map((section) => section.label);
+  const missingDetails = incompleteSections.map((section) => ({
+    key: section.key,
+    label: section.label,
+    missingFields: section.missingFields,
+  }));
   return {
     completionPercentage,
     filledFields,
     totalFields,
     missingSections,
+    missingDetails,
     sectionProgress,
   };
 };
@@ -227,6 +299,7 @@ const buildEmployeeResponse = async (user, includeSensitive = false) => {
     filledFields: completion.filledFields,
     totalFields: completion.totalFields,
     missingSections: completion.missingSections,
+    missingDetails: completion.missingDetails,
     sectionProgress: completion.sectionProgress,
   };
 };
@@ -378,6 +451,21 @@ export const editEmployee = async (req, res) => {
         .status(400)
         .json({ message: `Validation failed: ${messages.join(", ")}` });
     }
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const exportAllEmployees = async (req, res) => {
+  try {
+    const users = await UserModel.find({ status: { $ne: "rejected" } }).select(
+      "-passwordHash",
+    );
+    const employees = await Promise.all(
+      users.map(async (user) => buildEmployeeResponse(user, true)), // includeSensitive = true
+    );
+    res.json(employees);
+  } catch (error) {
+    console.error("Export all employees error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

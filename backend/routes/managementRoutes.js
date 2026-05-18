@@ -4,6 +4,7 @@ import {
   getEmployeeById,
   editEmployee,
   getAllEmployees,
+  exportAllEmployees,
   getPendingPayrolls,
   addPayrollDetails,
   bulkUploadEmployees,
@@ -62,6 +63,9 @@ router.post('/:id/sensitive-otp', requestSensitiveDetailsOtp);
 router.post('/:id/sensitive-verify', [
   body('otp').isLength({ min: 6, max: 6 }).isNumeric()
 ], verifySensitiveDetailsOtp);
+
+// @route   GET /api/employees/export  (must be before /:id)
+router.get('/export', exportAllEmployees);
 
 // @route   GET /api/employees/:id
 router.get('/:id', getEmployeeById);

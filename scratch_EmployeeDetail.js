@@ -44,21 +44,19 @@ const employmentTypeOptions = [
 ];
 
 const TABS = [
-  { id: "identity", label: "Basic Identity" },
-  { id: "contact", label: "Contact" },
-  { id: "government_id", label: "Government ID" },
-  { id: "education", label: "Education" },
-  { id: "employment", label: "Employment" },
-  { id: "payroll", label: "Payroll" },
+  { id: "personal", label: "Personal info" },
+  { id: "employee", label: "Employee details" },
+  { id: "payroll", label: "Payroll details" },
   { id: "documents", label: "Documents" },
+  { id: "payroll-history", label: "Payroll history" },
 ];
 
 const MISSING_SECTION_TARGETS = {
-  Personal: { tab: "identity", edit: "identity" },
-  Contact: { tab: "contact", edit: "contact" },
-  "Government ID": { tab: "government_id", edit: "government_id" },
-  Education: { tab: "education", edit: "education" },
-  Employment: { tab: "employment", edit: "employment" },
+  Personal: { tab: "personal", edit: "personal" },
+  Contact: { tab: "personal", edit: "address" },
+  "Government ID": { tab: "employee", edit: "bank" },
+  Education: { tab: "employee", edit: "professional" },
+  Employment: { tab: "employee", edit: "professional" },
   Payroll: { tab: "payroll", edit: "payroll" },
 };
 
@@ -131,14 +129,13 @@ const buildEmployeeUpdatePayload = (module, data = {}) => {
       };
     case "emergency":
       return {
-        emergencyContacts: (
-          data.emergencyContacts ||
-          [data.emergencyContact1, data.emergencyContact2].filter(Boolean)
-        ).map((contact) => ({
-          name: contact.name || "",
-          relationship: contact.relationship || "",
-          phone: contact.phone || contact.mobile || "",
-        })),
+        emergencyContacts: [data.emergencyContact1, data.emergencyContact2]
+          .filter(Boolean)
+          .map((contact) => ({
+            name: contact.name || "",
+            relationship: contact.relationship || "",
+            phone: contact.phone || contact.mobile || "",
+          })),
       };
     default:
       return data;
@@ -507,7 +504,7 @@ const EmployeeDetail = () => {
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("identity");
+  const [activeTab, setActiveTab] = useState("personal");
   const [editMode, setEditMode] = useState(null);
   const [formData, setFormData] = useState({});
   const [referenceOptions, setReferenceOptions] = useState({
@@ -556,7 +553,6 @@ const EmployeeDetail = () => {
       const data = response.data;
       setEmployeeData(data);
       setFormData(data);
-      setEditWizardDraft(buildEditDraft(data));
       setSensitiveDetails({ bank: null, payroll: null, unlocked: false });
       setOtpState({
         sending: false,
@@ -769,6 +765,12 @@ const EmployeeDetail = () => {
         }
 
         await fetchEmployeeData();
+
+        if (advance && editWizardStep < EDIT_STEPS.length - 1) {
+          setEditWizardStep((prev) => prev + 1);
+        } else if (currentStep.id === "documents") {
+          closeEditWizard();
+        }
       } catch (err) {
         setEditWizardError(
           err.response?.data?.message || "Failed to save employee details",
@@ -835,16 +837,12 @@ const EmployeeDetail = () => {
         unlocked: true,
       };
       setSensitiveDetails(unlocked);
-      setEmployeeData((prev) => {
-        const next = {
-          ...prev,
-          bank: unlocked.bank,
-          payroll: unlocked.payroll,
-          sensitiveDetailsLocked: false,
-        };
-        setEditWizardDraft(buildEditDraft(next));
-        return next;
-      });
+      setEmployeeData((prev) => ({
+        ...prev,
+        bank: unlocked.bank,
+        payroll: unlocked.payroll,
+        sensitiveDetailsLocked: false,
+      }));
       setFormData((prev) => ({
         ...prev,
         bank: unlocked.bank,
@@ -995,10 +993,8 @@ const EmployeeDetail = () => {
   const missingTarget = resolveMissingSectionTarget(missingSections);
 
   const jumpToMissingDetails = () => {
-    const tabId = missingTarget.tab || "identity";
-    setActiveTab(tabId);
-    setEditWizardStep(EDIT_STEP_INDEX[tabId] || 0);
-    setEditMode(tabId);
+    const stepIndex = SECTION_TO_STEP[missingTarget.edit || ""];
+    openEditWizard(stepIndex ?? 0);
   };
 
   const renderSensitiveGate = (title, description) => (
@@ -1055,6 +1051,1383 @@ const EmployeeDetail = () => {
       </div>
     </DetailCard>
   );
+
+  const renderPersonalTab = () => (
+    <>
+      <h2 className="ed-tab-section-title">Personal info</h2>
+
+      {personal && (
+        <DetailCard
+          title="Basic information"
+          canEdit={canEdit}
+          isEditing={editMode === "personal"}
+          onEdit={() => startEdit("personal")}
+          onSave={() => handleEdit("personal")}
+          onCancel={cancelEdit}
+        >
+          {editMode === "personal" ? (
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  value={formData.personal?.fullName || ""}
+                  onChange={(e) =>
+                    handleInputChange("personal", "fullName", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Gender</label>
+                <select
+                  value={formData.personal?.gender || ""}
+                  onChange={(e) =>
+                    handleInputChange("personal", "gender", e.target.value)
+                  }
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Date of Birth</label>
+                <input
+                  type="date"
+                  value={toDateInputValue(formData.personal?.dob)}
+                  onChange={(e) =>
+                    handleInputChange("personal", "dob", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Mobile</label>
+                <input
+                  type="text"
+                  value={formData.personal?.mobile || ""}
+                  onChange={(e) =>
+                    handleInputChange("personal", "mobile", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Blood Group</label>
+                <input
+                  type="text"
+                  value={formData.personal?.bloodGroup || ""}
+                  onChange={(e) =>
+                    handleInputChange("personal", "bloodGroup", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Blood Group</label>
+                <select
+                  value={formData.personal?.bloodGroup || ""}
+                  onChange={(e) =>
+                    handleInputChange("personal", "bloodGroup", e.target.value)
+                  }
+                >
+                  <option value="">Select</option>
+                  <option>A+</option>
+                  <option>A-</option>
+                  <option>B+</option>
+                  <option>B-</option>
+                  <option>AB+</option>
+                  <option>AB-</option>
+                  <option>O+</option>
+                  <option>O-</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Personal Email</label>
+                <input
+                  type="email"
+                  value={formData.personal?.personalEmail || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "personal",
+                      "personalEmail",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="ed-basic">
+              <div className="ed-basic-main">
+                <div className="ed-basic-name">{personal.fullName}</div>
+                <div className="ed-basic-id">{user.emp_code || user.id}</div>
+                <div className="ed-basic-contacts">
+                  <div className="ed-contact-row">
+                    <i className="ti ti-gender-bigender" aria-hidden="true" />
+                    <span>{personal.gender}</span>
+                  </div>
+                  <div className="ed-contact-row">
+                    <i className="ti ti-mail" aria-hidden="true" />
+                    <span>{personalEmail}</span>
+                  </div>
+                  <div className="ed-contact-row">
+                    <i className="ti ti-phone" aria-hidden="true" />
+                    <span>{personal.mobile}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="ed-basic-divider" aria-hidden="true" />
+              <div className="ed-basic-meta">
+                <div className="ed-meta-row">
+                  <span className="ed-meta-label">Birth date</span>
+                  <span className="ed-meta-value">
+                    {formatDate(personal.dob)}
+                  </span>
+                </div>
+                <div className="ed-meta-row">
+                  <span className="ed-meta-label">Age</span>
+                  <span className="ed-meta-value">
+                    {personal.age != null ? `${personal.age} years` : "N/A"}
+                  </span>
+                </div>
+                <div className="ed-meta-row">
+                  <span className="ed-meta-label">Blood type</span>
+                  <span className="ed-meta-value">
+                    {personal.bloodGroup || "N/A"}
+                  </span>
+                </div>
+                <div className="ed-meta-row">
+                  <span className="ed-meta-label">Marital status</span>
+                  <span className="ed-meta-value">
+                    {family?.maritalStatus || "N/A"}
+                  </span>
+                </div>
+                <div className="ed-meta-row">
+                  <span className="ed-meta-label">Status</span>
+                  <span className="ed-meta-value">
+                    <span className={`badge badge-${normalizedStatus}`}>
+                      {normalizedStatus === "approved" ? "Active" : "Rejected"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DetailCard>
+      )}
+
+      <div className="ed-grid-2">
+        {address && (
+          <DetailCard
+            title="Address"
+            canEdit={canEdit}
+            isEditing={editMode === "address"}
+            onEdit={() => startEdit("address")}
+            onSave={() => handleEdit("address")}
+            onCancel={cancelEdit}
+          >
+            {editMode === "address" ? (
+              <>
+                <h4 className="ed-subsection-title">Current address</h4>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Street</label>
+                    <input
+                      type="text"
+                      value={formData.address?.currentAddress?.street || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "currentAddress",
+                          "street",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>City</label>
+                    <input
+                      type="text"
+                      value={formData.address?.currentAddress?.city || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "currentAddress",
+                          "city",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>State</label>
+                    <input
+                      type="text"
+                      value={formData.address?.currentAddress?.state || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "currentAddress",
+                          "state",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Pincode</label>
+                    <input
+                      type="text"
+                      value={formData.address?.currentAddress?.pincode || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "currentAddress",
+                          "pincode",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Country</label>
+                    <input
+                      type="text"
+                      value={formData.address?.currentAddress?.country || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "currentAddress",
+                          "country",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <h4 className="ed-subsection-title">Permanent address</h4>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Street</label>
+                    <input
+                      type="text"
+                      value={formData.address?.permanentAddress?.street || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "permanentAddress",
+                          "street",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>City</label>
+                    <input
+                      type="text"
+                      value={formData.address?.permanentAddress?.city || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "permanentAddress",
+                          "city",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>State</label>
+                    <input
+                      type="text"
+                      value={formData.address?.permanentAddress?.state || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "permanentAddress",
+                          "state",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Pincode</label>
+                    <input
+                      type="text"
+                      value={formData.address?.permanentAddress?.pincode || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "permanentAddress",
+                          "pincode",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Country</label>
+                    <input
+                      type="text"
+                      value={formData.address?.permanentAddress?.country || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "address",
+                          "permanentAddress",
+                          "country",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <Field
+                  label="Current address"
+                  value={formatAddress(address.currentAddress)}
+                />
+                <Field
+                  label="Permanent address"
+                  value={formatAddress(address.permanentAddress)}
+                />
+              </>
+            )}
+          </DetailCard>
+        )}
+
+        {emergency && (
+          <DetailCard
+            title="Emergency contact"
+            canEdit={canEdit}
+            isEditing={editMode === "emergency"}
+            onEdit={() => startEdit("emergency")}
+            onSave={() => handleEdit("emergency")}
+            onCancel={cancelEdit}
+          >
+            {editMode === "emergency" ? (
+              <>
+                <h4 className="ed-subsection-title">Primary contact</h4>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Name</label>
+                    <input
+                      type="text"
+                      value={formData.emergency?.emergencyContact1?.name || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "emergency",
+                          "emergencyContact1",
+                          "name",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Relationship</label>
+                    <select
+                      value={
+                        formData.emergency?.emergencyContact1?.relationship ||
+                        ""
+                      }
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "emergency",
+                          "emergencyContact1",
+                          "relationship",
+                          e.target.value,
+                        )
+                      }
+                    >
+                      <option value="">Select Relationship</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Brother">Brother</option>
+                      <option value="Sister">Sister</option>
+                      <option value="Friend">Friend</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Mobile</label>
+                    <input
+                      type="text"
+                      value={
+                        formData.emergency?.emergencyContact1?.mobile || ""
+                      }
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "emergency",
+                          "emergencyContact1",
+                          "mobile",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <h4 className="ed-subsection-title">Secondary contact</h4>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Name</label>
+                    <input
+                      type="text"
+                      value={formData.emergency?.emergencyContact2?.name || ""}
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "emergency",
+                          "emergencyContact2",
+                          "name",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Relationship</label>
+                    <select
+                      value={
+                        formData.emergency?.emergencyContact2?.relationship ||
+                        ""
+                      }
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "emergency",
+                          "emergencyContact2",
+                          "relationship",
+                          e.target.value,
+                        )
+                      }
+                    >
+                      <option value="">Select Relationship</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Brother">Brother</option>
+                      <option value="Sister">Sister</option>
+                      <option value="Friend">Friend</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Mobile</label>
+                    <input
+                      type="text"
+                      value={
+                        formData.emergency?.emergencyContact2?.mobile || ""
+                      }
+                      onChange={(e) =>
+                        handleNestedInputChange(
+                          "emergency",
+                          "emergencyContact2",
+                          "mobile",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <Field label="Name" value={emergency.emergencyContact1?.name} />
+                <Field
+                  label="Relationship"
+                  value={emergency.emergencyContact1?.relationship}
+                />
+                <Field
+                  label="Phone number"
+                  value={emergency.emergencyContact1?.mobile}
+                />
+                {emergency.emergencyContact2?.name && (
+                  <>
+                    <h4 className="ed-subsection-title">Secondary contact</h4>
+                    <Field
+                      label="Name"
+                      value={emergency.emergencyContact2.name}
+                    />
+                    <Field
+                      label="Relationship"
+                      value={emergency.emergencyContact2.relationship}
+                    />
+                    <Field
+                      label="Phone number"
+                      value={emergency.emergencyContact2.mobile}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </DetailCard>
+        )}
+      </div>
+
+      {family && (
+        <DetailCard
+          title="Family"
+          canEdit={canEdit}
+          isEditing={editMode === "family"}
+          onEdit={() => startEdit("family")}
+          onSave={() => handleEdit("family")}
+          onCancel={cancelEdit}
+        >
+          {editMode === "family" ? (
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Father&apos;s Name</label>
+                <input
+                  type="text"
+                  value={formData.family?.fatherName || ""}
+                  onChange={(e) =>
+                    handleInputChange("family", "fatherName", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Mother&apos;s Name</label>
+                <input
+                  type="text"
+                  value={formData.family?.motherName || ""}
+                  onChange={(e) =>
+                    handleInputChange("family", "motherName", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Marital Status</label>
+                <select
+                  value={formData.family?.maritalStatus || "Single"}
+                  onChange={(e) =>
+                    handleInputChange("family", "maritalStatus", e.target.value)
+                  }
+                >
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Widowed">Widowed</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Separated">Separated</option>
+                </select>
+              </div>
+              {formData.family?.maritalStatus === "Married" && (
+                <>
+                  <div className="form-group">
+                    <label>Spouse Name</label>
+                    <input
+                      type="text"
+                      value={formData.family?.spouseName || ""}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "family",
+                          "spouseName",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Marriage Date</label>
+                    <input
+                      type="date"
+                      value={toDateInputValue(formData.family?.marriageDate)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "family",
+                          "marriageDate",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="ed-family-table">
+                <thead>
+                  <tr>
+                    <th>Family type</th>
+                    <th>Person name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Father</td>
+                    <td>{family.fatherName}</td>
+                  </tr>
+                  <tr>
+                    <td>Mother</td>
+                    <td>{family.motherName}</td>
+                  </tr>
+                  {family.maritalStatus === "Married" && family.spouseName && (
+                    <tr>
+                      <td>Spouse</td>
+                      <td>{family.spouseName}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DetailCard>
+      )}
+    </>
+  );
+
+  const renderEmployeeTab = () => (
+    <>
+      <h2 className="ed-tab-section-title">Employee details</h2>
+
+      {professional ? (
+        <DetailCard
+          title="Professional information"
+          canEdit={canEdit}
+          isEditing={editMode === "professional"}
+          onEdit={() => startEdit("professional")}
+          onSave={() => handleEdit("professional")}
+          onCancel={cancelEdit}
+        >
+          {editMode === "professional" ? (
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Department</label>
+                <select
+                  value={formData.professional?.department || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "department",
+                      e.target.value,
+                    )
+                  }
+                >
+                  <option value="">Select Department</option>
+                  {referenceOptions.departments.map((dep) => (
+                    <option key={dep} value={dep}>
+                      {dep}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Designation</label>
+                <select
+                  value={formData.professional?.jobTitle || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "jobTitle",
+                      e.target.value,
+                    )
+                  }
+                >
+                  <option value="">Select Designation</option>
+                  {referenceOptions.designations.map((title) => (
+                    <option key={title} value={title}>
+                      {title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Employment Type</label>
+                <select
+                  value={formData.professional?.employmentType || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "employmentType",
+                      e.target.value,
+                    )
+                  }
+                >
+                  <option value="">Select Employment Type</option>
+                  {referenceOptions.employmentTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Date Joined</label>
+                <input
+                  type="date"
+                  value={toDateInputValue(formData.professional?.dateJoined)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "dateJoined",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Reporting Manager</label>
+                <input
+                  type="text"
+                  value={formData.professional?.reportingManager || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "reportingManager",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Work Email</label>
+                <input
+                  type="email"
+                  value={formData.professional?.workEmail || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "workEmail",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>LinkedIn URL</label>
+                <input
+                  type="url"
+                  value={formData.professional?.linkedinUrl || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "linkedinUrl",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Biometric ID</label>
+                <input
+                  type="text"
+                  value={formData.professional?.attendanceBiometricId || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "attendanceBiometricId",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Name as per Aadhaar</label>
+                <input
+                  type="text"
+                  value={formData.professional?.nameAsPerAadhaar || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "professional",
+                      "nameAsPerAadhaar",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <div
+                  style={{
+                    height: "42px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <label className="checkbox-label" style={{ margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.professional?.inProbation || false}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "professional",
+                          "inProbation",
+                          e.target.checked,
+                        )
+                      }
+                    />
+                    In Probation
+                  </label>
+                </div>
+              </div>
+              {formData.professional?.inProbation && (
+                <div className="form-group">
+                  <label>Probation Duration (in months)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    placeholder="Enter months (e.g., 3)"
+                    value={formData.professional?.probationDuration || ""}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "professional",
+                        "probationDuration",
+                        e.target.value,
+                      )
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="ed-detail-grid">
+              <DetailItem label="Employee code" value={user.emp_code} />
+              <DetailItem label="Department" value={professional.department} />
+              <DetailItem label="Job title" value={professional.jobTitle} />
+              <DetailItem
+                label="Employment type"
+                value={professional.employmentType}
+              />
+              <DetailItem
+                label="Date joined"
+                value={formatDate(professional.dateJoined)}
+              />
+              <DetailItem
+                label="Reporting manager"
+                value={professional.reportingManager}
+              />
+              <DetailItem label="Work email" value={workEmail} />
+              <DetailItem
+                label="Biometric ID"
+                value={professional.attendanceBiometricId}
+              />
+              {professional.linkedinUrl && (
+                <DetailItem
+                  label="LinkedIn"
+                  value={
+                    <a
+                      href={professional.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View profile
+                    </a>
+                  }
+                />
+              )}
+              {professional.nameAsPerAadhaar && (
+                <DetailItem
+                  label="Name as per Aadhaar"
+                  value={professional.nameAsPerAadhaar}
+                />
+              )}
+              <DetailItem
+                label="Probation status"
+                value={
+                  professional.inProbation
+                    ? `In probation (${professional.probationDuration ? `${professional.probationDuration} month(s)` : "duration not set"})`
+                    : "Confirmed"
+                }
+              />
+            </div>
+          )}
+        </DetailCard>
+      ) : (
+        <div className="ed-empty-tab">
+          No professional details available yet. Use the fill-details action
+          above to complete this profile.
+        </div>
+      )}
+
+      {!isPending &&
+        hasBankDetails &&
+        !unlockedBank &&
+        renderSensitiveGate("Bank details", "Bank details are protected")}
+
+      {!isPending && unlockedBank && (
+        <DetailCard
+          title="Bank details"
+          canEdit={canEdit}
+          isEditing={editMode === "bank"}
+          onEdit={() => startEdit("bank")}
+          onSave={() => handleEdit("bank")}
+          onCancel={cancelEdit}
+        >
+          {editMode === "bank" ? (
+            <div className="grid-2">
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <label
+                  className="checkbox-label"
+                  style={{ textTransform: "none" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.bank?.companyOpensBank || false}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "bank",
+                        "companyOpensBank",
+                        e.target.checked,
+                      )
+                    }
+                  />
+                  Company open bank account
+                </label>
+              </div>
+              <div className="form-group">
+                <label>PAN Number</label>
+                <input
+                  type="text"
+                  value={formData.bank?.panNumber || ""}
+                  onChange={(e) =>
+                    handleInputChange("bank", "panNumber", e.target.value)
+                  }
+                  style={{ textTransform: "uppercase" }}
+                  maxLength="10"
+                />
+              </div>
+              <div className="form-group">
+                <label>Aadhar Number</label>
+                <input
+                  type="text"
+                  value={formData.bank?.aadharNumber || ""}
+                  onChange={(e) =>
+                    handleInputChange("bank", "aadharNumber", e.target.value)
+                  }
+                  maxLength="12"
+                />
+              </div>
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <label
+                  className="checkbox-label"
+                  style={{ textTransform: "none" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.bank?.permissionToUsePanAadhar || false}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "bank",
+                        "permissionToUsePanAadhar",
+                        e.target.checked,
+                      )
+                    }
+                  />
+                  Permission granted to use PAN and Aadhar
+                </label>
+              </div>
+              <div className="form-group">
+                <label>Bank Name</label>
+                <input
+                  type="text"
+                  value={formData.bank?.bankName || ""}
+                  onChange={(e) =>
+                    handleInputChange("bank", "bankName", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Branch</label>
+                <input
+                  type="text"
+                  value={formData.bank?.branch || ""}
+                  onChange={(e) =>
+                    handleInputChange("bank", "branch", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Personal Account Number</label>
+                <input
+                  type="text"
+                  value={formData.bank?.personalAccountNumber || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "bank",
+                      "personalAccountNumber",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Personal IFSC Code</label>
+                <input
+                  type="text"
+                  value={formData.bank?.personalIfsc || ""}
+                  onChange={(e) =>
+                    handleInputChange("bank", "personalIfsc", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Salary Account Number</label>
+                <input
+                  type="text"
+                  value={formData.bank?.salaryAccountNumber || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "bank",
+                      "salaryAccountNumber",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Salary IFSC Code</label>
+                <input
+                  type="text"
+                  value={formData.bank?.salaryIfsc || ""}
+                  onChange={(e) =>
+                    handleInputChange("bank", "salaryIfsc", e.target.value)
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="ed-detail-grid">
+              <DetailItem
+                label="Company opens bank"
+                value={unlockedBank.companyOpensBank ? "Yes" : "No"}
+              />
+              <DetailItem label="PAN number" value={unlockedBank.panNumber} />
+              <DetailItem
+                label="Aadhar number"
+                value={unlockedBank.aadharNumber}
+              />
+              <DetailItem
+                label="Permission granted"
+                value={unlockedBank.permissionToUsePanAadhar ? "Yes" : "No"}
+              />
+              <DetailItem label="Bank name" value={unlockedBank.bankName} />
+              <DetailItem
+                label="Account holder"
+                value={unlockedBank.accountHolderName}
+              />
+              <DetailItem label="Branch" value={unlockedBank.branch} />
+              <DetailItem
+                label="Personal account"
+                value={unlockedBank.personalAccountNumber}
+              />
+              <DetailItem
+                label="Personal IFSC"
+                value={unlockedBank.personalIfsc}
+              />
+              <DetailItem
+                label="Salary account"
+                value={unlockedBank.salaryAccountNumber}
+              />
+              <DetailItem label="Salary IFSC" value={unlockedBank.salaryIfsc} />
+            </div>
+          )}
+        </DetailCard>
+      )}
+
+      {!isPending && !professional && !hasBankDetails && (
+        <div className="ed-empty-tab">No employee details available.</div>
+      )}
+    </>
+  );
+
+  const renderPayrollTab = () => (
+    <>
+      <h2 className="ed-tab-section-title">Payroll details</h2>
+      {!isPending && hasPayrollDetails && !unlockedPayroll ? (
+        renderSensitiveGate(
+          "Payroll information",
+          "Payroll details are protected",
+        )
+      ) : !isPending && unlockedPayroll ? (
+        <DetailCard
+          title="Payroll information"
+          canEdit={canEdit}
+          isEditing={editMode === "payroll"}
+          onEdit={() => startEdit("payroll")}
+          onSave={() => handleEdit("payroll")}
+          onCancel={cancelEdit}
+        >
+          {editMode === "payroll" ? (
+            <div className="ed-form-grid">
+              <div className="ed-field">
+                <label className="ed-label">CTC</label>
+                <input
+                  type="number"
+                  className="ed-input"
+                  value={formData.payroll?.ctc || ""}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "payroll",
+                      null,
+                      "ctc",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div className="ed-field">
+                <label className="ed-label">Gross salary</label>
+                <input
+                  type="number"
+                  className="ed-input"
+                  value={formData.payroll?.gross || ""}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "payroll",
+                      null,
+                      "gross",
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <div
+                className="ed-field"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.payroll?.pf || false}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "payroll",
+                      null,
+                      "pf",
+                      e.target.checked,
+                    )
+                  }
+                />
+                <label className="ed-label" style={{ margin: 0 }}>
+                  PF Applicable
+                </label>
+              </div>
+              <div
+                className="ed-field"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.payroll?.pt || false}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "payroll",
+                      null,
+                      "pt",
+                      e.target.checked,
+                    )
+                  }
+                />
+                <label className="ed-label" style={{ margin: 0 }}>
+                  PT Applicable
+                </label>
+              </div>
+              <div
+                className="ed-field"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.payroll?.esic || false}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "payroll",
+                      null,
+                      "esic",
+                      e.target.checked,
+                    )
+                  }
+                />
+                <label className="ed-label" style={{ margin: 0 }}>
+                  ESIC Applicable
+                </label>
+              </div>
+              <div
+                className="ed-field"
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.payroll?.tds || false}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "payroll",
+                      null,
+                      "tds",
+                      e.target.checked,
+                    )
+                  }
+                />
+                <label className="ed-label" style={{ margin: 0 }}>
+                  TDS Applicable
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="ed-detail-grid">
+              <DetailItem
+                label="CTC"
+                value={
+                  (unlockedPayroll || {}).ctc
+                    ? `₹${(unlockedPayroll || {}).ctc.toLocaleString("en-IN")}`
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                label="Gross salary"
+                value={
+                  (unlockedPayroll || {}).gross
+                    ? `₹${(unlockedPayroll || {}).gross.toLocaleString("en-IN")}`
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                label="PF"
+                value={(unlockedPayroll || {}).pf ? "Applicable" : "Not applicable"}
+              />
+              <DetailItem
+                label="PT"
+                value={(unlockedPayroll || {}).pt ? "Applicable" : "Not applicable"}
+              />
+              <DetailItem
+                label="ESIC"
+                value={(unlockedPayroll || {}).esic ? "Applicable" : "Not applicable"}
+              />
+              <DetailItem
+                label="TDS"
+                value={(unlockedPayroll || {}).tds ? "Applicable" : "Not applicable"}
+              />
+            </div>
+          )}
+        </DetailCard>
+      ) : (
+        <div className="ed-empty-tab">
+          {isPending
+            ? "Payroll details will be available after approval."
+            : "No payroll details available."}
+        </div>
+      )}
+    </>
+  );
+
+  const renderPayrollHistoryTab = () => {
+    if (isPending) {
+      return (
+        <div className="ed-empty-tab">
+          Payroll history will be available after approval.
+        </div>
+      );
+    }
+    if (!hasPayrollDetails) {
+      return <div className="ed-empty-tab">No payroll history available.</div>;
+    }
+    if (!unlockedPayroll) {
+      return renderSensitiveGate(
+        "Payroll history",
+        "Payroll history is protected",
+      );
+    }
+
+    const history = unlockedPayroll.history || [];
+
+    if (history.length === 0) {
+      return <div className="ed-empty-tab">No payroll history available.</div>;
+    }
+
+    const sortedHistory = [...history].sort(
+      (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
+    );
+
+    return (
+      <div className="ed-timeline" style={{ marginTop: "20px" }}>
+        {sortedHistory.map((entry, index) => (
+          <div
+            key={index}
+            className="ed-timeline-item"
+            style={{
+              borderLeft: "2px solid var(--color-primary)",
+              paddingLeft: "16px",
+              position: "relative",
+              marginBottom: "24px",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: "-6px",
+                top: "0",
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background: "var(--color-primary)",
+              }}
+            ></div>
+            <div
+              style={{
+                fontSize: "var(--font-sm)",
+                color: "var(--color-text-muted)",
+                marginBottom: "8px",
+                fontWeight: "500",
+              }}
+            >
+              {new Date(entry.updatedAt).toLocaleDateString("en-IN", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              -{" "}
+              <span style={{ textTransform: "capitalize" }}>
+                {entry.changeType || "Updated"}
+              </span>
+            </div>
+            <div
+              className="ed-detail-grid"
+              style={{
+                background: "var(--color-bg-secondary)",
+                padding: "16px",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <DetailItem
+                label="CTC"
+                value={
+                  entry.ctc ? `₹${entry.ctc.toLocaleString("en-IN")}` : "N/A"
+                }
+              />
+              <DetailItem
+                label="Gross salary"
+                value={
+                  entry.gross
+                    ? `₹${entry.gross.toLocaleString("en-IN")}`
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                label="PF"
+                value={entry.pf ? "Applicable" : "Not applicable"}
+              />
+              <DetailItem
+                label="PT"
+                value={entry.pt ? "Applicable" : "Not applicable"}
+              />
+              <DetailItem
+                label="ESIC"
+                value={entry.esic ? "Applicable" : "Not applicable"}
+              />
+              <DetailItem
+                label="TDS"
+                value={entry.tds ? "Applicable" : "Not applicable"}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const renderEditWizardStep = () => {
     if (!editWizardDraft) return null;
@@ -2271,56 +3644,23 @@ const EmployeeDetail = () => {
     }
   };
 
-  
   const renderTabContent = () => {
-    if (!editWizardDraft) return null;
-    const currentStep = EDIT_STEPS.find(s => s.id === activeTab);
-    const stepIndex = EDIT_STEP_INDEX[activeTab];
-
-    if (
-      (activeTab === "payroll" || activeTab === "government_id") &&
-      !sensitiveDetails.unlocked
-    ) {
-      return (
-        <div className="ed-tab-content" style={{ marginTop: 24 }}>
-          {renderSensitiveGate(
-            currentStep.label,
-            `${currentStep.label} details are protected`
-          )}
-        </div>
-      );
-    }
-
-    const isEditing = editMode === activeTab;
-    
-    return (
-      <div className="ed-tab-content" style={{ marginTop: 24 }}>
-        <DetailCard
-          title={currentStep.label}
-          canEdit={true}
-          isEditing={isEditing}
-          onEdit={() => {
-            setEditMode(activeTab);
-            setEditWizardStep(stepIndex);
-          }}
-          onSave={async () => {
-            await saveEditWizardStep(false);
-            setEditMode(null);
-          }}
-          onCancel={() => {
-            setEditMode(null);
-            setEditWizardDraft(buildEditDraft(employeeData));
-          }}
-        >
-          <fieldset disabled={!isEditing} style={{ border: "none", padding: 0, margin: 0 }}>
-            {renderEditWizardStep()}
-          </fieldset>
-          
-          {activeTab === "documents" && (
-            <div style={{ marginTop: 24 }}>
-              <h4 className="ed-subsection-title">Uploaded documents</h4>
+    switch (activeTab) {
+      case "personal":
+        return renderPersonalTab();
+      case "employee":
+        return renderEmployeeTab();
+      case "payroll":
+        return renderPayrollTab();
+      case "documents":
+        return (
+          <>
+            <h2 className="ed-tab-section-title">Documents</h2>
+            <DetailCard title="Uploaded documents" canEdit={false}>
               {documentsLoading ? (
-                <div className="ed-empty-tab">Loading uploaded documents...</div>
+                <div className="ed-empty-tab">
+                  Loading uploaded documents...
+                </div>
               ) : documentsError ? (
                 <div className="alert alert-error">{documentsError}</div>
               ) : employeeDocuments.length > 0 ? (
@@ -2339,7 +3679,12 @@ const EmployeeDetail = () => {
                       <span className="ed-document-item__body">
                         <strong>{document.fileName}</strong>
                         <small>
-                          {document.category?.replaceAll("_", " ") || "Document"} · {formatDate(document.uploadedAt || document.createdAt)}
+                          {document.category?.replaceAll("_", " ") ||
+                            "Document"}{" "}
+                          ·{" "}
+                          {formatDate(
+                            document.uploadedAt || document.createdAt,
+                          )}
                         </small>
                       </span>
                       <span className="ed-document-item__action">Open</span>
@@ -2347,16 +3692,24 @@ const EmployeeDetail = () => {
                   ))}
                 </div>
               ) : (
-                <div className="ed-empty-tab">No uploaded documents found for this employee.</div>
+                <div className="ed-empty-tab">
+                  No uploaded documents found for this employee.
+                </div>
               )}
-            </div>
-          )}
-        </DetailCard>
-      </div>
-    );
+            </DetailCard>
+          </>
+        );
+      case "payroll-history":
+        return (
+          <>
+            <h2 className="ed-tab-section-title">Payroll history</h2>
+            {renderPayrollHistoryTab()}
+          </>
+        );
+      default:
+        return null;
+    }
   };
-
-
 
   return (
     <div className="container ed-page">
@@ -2478,7 +3831,13 @@ const EmployeeDetail = () => {
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => openEditWizard(0)}
+          >
+            Edit Details
+          </button>
           <button
             type="button"
             className="btn btn-secondary"
@@ -2500,7 +3859,6 @@ const EmployeeDetail = () => {
               className={`tab${activeTab === tab.id ? " active" : ""}`}
               onClick={() => {
                 setActiveTab(tab.id);
-                setEditWizardStep(EDIT_STEP_INDEX[tab.id]);
                 if (editMode) cancelEdit();
               }}
             >
@@ -2512,6 +3870,82 @@ const EmployeeDetail = () => {
 
       {renderTabContent()}
 
+      {editWizardOpen && editWizardDraft && (
+        <div className="ed-wizard-overlay" role="dialog" aria-modal="true">
+          <div className="ed-wizard">
+            <div className="ed-wizard-head">
+              <div>
+                <p className="ed-breadcrumb" style={{ marginBottom: 4 }}>
+                  Employee <span>/</span> Edit Details
+                </p>
+                <h2 className="ed-wizard-title">
+                  {EDIT_STEPS[editWizardStep].label}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeEditWizard}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="ed-wizard-stepper">
+              {EDIT_STEPS.map((step, index) => (
+                <div
+                  key={step.id}
+                  className={`ed-wizard-step${index === editWizardStep ? " is-active" : index < editWizardStep ? " is-complete" : ""}`}
+                >
+                  <span className="ed-wizard-step__dot">{index + 1}</span>
+                  <span className="ed-wizard-step__label">{step.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {editWizardError && (
+              <div className="alert alert-error" style={{ marginBottom: 16 }}>
+                {editWizardError}
+              </div>
+            )}
+
+            <div className="ed-wizard-body">{renderEditWizardStep()}</div>
+
+            <div className="ed-wizard-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeEditWizard}
+                disabled={editWizardSaving}
+              >
+                Cancel
+              </button>
+              {editWizardStep > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setEditWizardStep((prev) => prev - 1)}
+                  disabled={editWizardSaving}
+                >
+                  Back
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => saveEditWizardStep(editWizardStep < EDIT_STEPS.length - 1)}
+                disabled={editWizardSaving}
+              >
+                {editWizardSaving
+                  ? "Saving..."
+                  : editWizardStep < EDIT_STEPS.length - 1
+                    ? "Save & Next"
+                    : "Save & Close"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

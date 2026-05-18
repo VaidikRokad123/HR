@@ -33,7 +33,7 @@ const initialForm = {
   endDate: "",
   salaryType: "paid",
   salaryAmount: "",
-  companyName: "SAECULUM SOLUTIONS PVT LTD",
+  companyName: "Saeculum Solutions Pvt. Ltd.",
   signatoryName: "HARDIKKUMAR VINZAVA",
   signatoryTitle: "DIRECTOR",
 };

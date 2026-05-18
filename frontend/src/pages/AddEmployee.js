@@ -48,6 +48,7 @@ const INITIAL = {
   maritalStatus: "",
   religion: "",
   physicallyHandicapped: "",
+  bloodGroup: "",
   personalMobile: "",
   personalEmail: "",
   currentAddress: { street: "", city: "", state: "", pincode: "" },
@@ -315,6 +316,7 @@ const AddEmployee = () => {
               personal.physicallyHandicapped === "not set yet"
                 ? ""
                 : personal.physicallyHandicapped || "",
+            bloodGroup: personal.bloodGroup || "",
             personalMobile: personal.personalMobile || personal.mobile || "",
             personalEmail: personal.personalEmail || e.user?.email || "",
             currentAddress: address.currentAddress || INITIAL.currentAddress,
@@ -512,6 +514,7 @@ const AddEmployee = () => {
       if (!form.dob) e.dob = "Required";
       if (!form.gender) e.gender = "Required";
       if (!form.maritalStatus) e.maritalStatus = "Required";
+      if (!form.bloodGroup) e.bloodGroup = "Required";
     }
     if (forStep === 1) {
       if (!form.personalMobile) e.personalMobile = "Required";
@@ -583,6 +586,7 @@ const AddEmployee = () => {
       if (!form.dob) e.dob = true;
       if (!form.gender) e.gender = true;
       if (!form.maritalStatus) e.maritalStatus = true;
+      if (!form.bloodGroup) e.bloodGroup = true;
     }
     if (forStep === 1) {
       if (!form.personalMobile) e.personalMobile = true;
@@ -920,6 +924,23 @@ const AddEmployee = () => {
                   <option value="">Select</option>
                   <option>Yes</option>
                   <option>No</option>
+                </select>
+              </Field>
+              <Field label="Blood Group" required error={errors.bloodGroup}>
+                <select
+                  value={form.bloodGroup}
+                  onChange={(e) => set("bloodGroup", e.target.value)}
+                  className={errors.bloodGroup ? "error" : ""}
+                >
+                  <option value="">Select group</option>
+                  <option>A+</option>
+                  <option>A-</option>
+                  <option>B+</option>
+                  <option>B-</option>
+                  <option>AB+</option>
+                  <option>AB-</option>
+                  <option>O+</option>
+                  <option>O-</option>
                 </select>
               </Field>
             </div>
