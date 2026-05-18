@@ -34,6 +34,11 @@ const STEPS = [
 
 const EMPTY_EMERGENCY = { name: "", phone: "", relationship: "" };
 const EMPTY_REFERENCE = { name: "", phone: "", email: "" };
+const DOCUMENT_CATEGORY_LABELS = {
+  personal_identity: "Personal identity",
+  onboarding: "Onboarding",
+  offboarding: "Offboarding",
+};
 
 const INITIAL = {
   emp_code: "",
@@ -98,6 +103,12 @@ function getCities(stateName) {
       .map((c) => c.trim())
       .filter(Boolean);
   return [];
+}
+
+function dateInputValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().split("T")[0];
 }
 
 function pruneEmptyValues(value) {
@@ -243,7 +254,15 @@ const AddEmployee = () => {
   const [docFiles, setDocFiles] = useState({
     personal_identity: null,
     onboarding: null,
-    offboarding: null
+    offboarding: null,
+  });
+  const [uploadProgress, setUploadProgress] = useState({
+    active: false,
+    current: 0,
+    total: 0,
+    percent: 0,
+    fileName: "",
+    category: "",
   });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState("idle");
@@ -273,47 +292,100 @@ const AddEmployee = () => {
           const e = r.data.employee || r.data;
           const personal = e.personal || {};
           const address = e.address || {};
-          const emergencyContact = e.emergency?.emergencyContact1;
+
           const professional = e.professional || {};
           const bank = e.bank || {};
           const payroll = e.payroll || {};
+          const primaryEmergency =
+            e.emergency?.emergencyContact1 ||
+            e.emergency?.emergencyContacts?.[0];
           setForm({
             ...INITIAL,
             emp_code: e.user?.emp_code || "",
             fullName: personal.fullName || "",
-            dob: personal.dob ? personal.dob.slice(0, 10) : "",
+            dob: dateInputValue(personal.dob),
             gender: personal.gender || "",
-            personalMobile: personal.mobile || "",
+            maritalStatus:
+              personal.maritalStatus || e.family?.maritalStatus || "",
+            religion:
+              personal.religion === "not set yet"
+                ? ""
+                : personal.religion || "",
+            physicallyHandicapped:
+              personal.physicallyHandicapped === "not set yet"
+                ? ""
+                : personal.physicallyHandicapped || "",
+            personalMobile: personal.personalMobile || personal.mobile || "",
             personalEmail: personal.personalEmail || e.user?.email || "",
             currentAddress: address.currentAddress || INITIAL.currentAddress,
-            permanentAddress: address.permanentAddress || INITIAL.permanentAddress,
-            dateJoining: professional.dateJoined ? professional.dateJoined.slice(0, 10) : "",
+            sameAsCurrent: address.sameAsCurrent || false,
+            permanentAddress:
+              address.permanentAddress || INITIAL.permanentAddress,
+            dateJoining: dateInputValue(
+              professional.dateJoining || professional.dateJoined,
+            ),
             employmentType: professional.employmentType || "",
-            designation: professional.jobTitle || "",
+            probationMonths:
+              professional.probationMonths ??
+              professional.probationDuration ??
+              0,
+            confirmationDate: dateInputValue(professional.confirmationDate),
+            workLocation: professional.workLocation || "",
+            designation:
+              professional.designation || professional.jobTitle || "",
             department: professional.department || "",
             reportingManager: professional.reportingManager || "",
-            officialEmail: professional.workEmail || "",
+            officialEmail:
+              professional.officialEmail || professional.workEmail || "",
+            workMobile: professional.workMobile || "",
+            laptopAssigned:
+              professional.laptopAssigned === "not set yet"
+                ? ""
+                : professional.laptopAssigned || "",
             aadharNumber: bank.aadharNumber || "",
             panNumber: bank.panNumber || "",
-            bankNameBranch: bank.bankName || "",
+            bankNameBranch: bank.bankNameBranch || bank.bankName || "",
             accountHolderName: bank.accountHolderName || "",
-            accountNumber: bank.personalAccountNumber || "",
-            ifscCode: bank.personalIfsc || "",
+            accountNumber:
+              bank.accountNumber || bank.personalAccountNumber || "",
+            ifscCode: bank.ifscCode || bank.personalIfsc || "",
             gross: payroll.gross || "",
             ctc: payroll.ctc || "",
-            pfApplicable: payroll.pf || false,
-            esicApplicable: payroll.esic || false,
-            ptApplicable: payroll.pt || false,
+            pfApplicable: payroll.pfApplicable ?? payroll.pf ?? false,
+            pfNumber:
+              payroll.pfNumber === "not set yet" ? "" : payroll.pfNumber || "",
+            uanNumber:
+              payroll.uanNumber === "not set yet"
+                ? ""
+                : payroll.uanNumber || "",
+            esicApplicable: payroll.esicApplicable ?? payroll.esic ?? false,
+            esicNumber:
+              payroll.esicNumber === "not set yet"
+                ? ""
+                : payroll.esicNumber || "",
+            ptApplicable: payroll.ptApplicable ?? payroll.pt ?? false,
+            ptNumber:
+              payroll.ptNumber === "not set yet" ? "" : payroll.ptNumber || "",
+            tdsRegime:
+              payroll.tdsRegime === "not set yet"
+                ? ""
+                : payroll.tdsRegime || "",
+            form12bb:
+              payroll.form12bb === "not set yet" ? "" : payroll.form12bb || "",
           });
-          if (emergencyContact) {
-            setEmergency([{
-              name: emergencyContact.name || "",
-              phone: emergencyContact.mobile || "",
-              relationship: emergencyContact.relationship || "",
-            }]);
+          if (primaryEmergency) {
+            setEmergency([
+              {
+                name: primaryEmergency.name || "",
+                phone: primaryEmergency.phone || primaryEmergency.mobile || "",
+                relationship: primaryEmergency.relationship || "",
+              },
+            ]);
           }
-          if (e.references?.length) setRefs(e.references);
-          if (e.user?.pendingSections?.length) setPending(e.user.pendingSections);
+          if (e.family?.references?.length) setRefs(e.family.references);
+          else if (e.references?.length) setRefs(e.references);
+          if (e.user?.pendingSections?.length)
+            setPending(e.user.pendingSections);
         })
         .catch(() => {});
       return;
@@ -434,7 +506,7 @@ const AddEmployee = () => {
       setErrors({});
       return true;
     }
-    
+
     if (forStep === 0) {
       if (!form.fullName) e.fullName = "Required";
       if (!form.dob) e.dob = "Required";
@@ -559,7 +631,9 @@ const AddEmployee = () => {
 
   const getPendingSectionsFromForm = () =>
     STEPS.reduce((sections, item, index) => {
-      return hasUnfilledRequiredFields(index) ? [...sections, item.key] : sections;
+      return hasUnfilledRequiredFields(index)
+        ? [...sections, item.key]
+        : sections;
     }, []);
 
   const handleSkip = () => {
@@ -570,7 +644,9 @@ const AddEmployee = () => {
     // Otherwise → just advance without marking pending
     let nextPending = pending;
     if (hasEmpty) {
-      nextPending = pending.includes(sectionName) ? pending : [...pending, sectionName];
+      nextPending = pending.includes(sectionName)
+        ? pending
+        : [...pending, sectionName];
       setPending(nextPending);
     } else {
       // All required fields filled — remove from pending if it was there before
@@ -585,25 +661,77 @@ const AddEmployee = () => {
 
   const handleDocFileChange = (category, e) => {
     if (e.target.files && e.target.files[0]) {
-      setDocFiles(prev => ({ ...prev, [category]: e.target.files[0] }));
+      setDocFiles((prev) => ({ ...prev, [category]: e.target.files[0] }));
     }
   };
 
   const uploadDocuments = async (empCode) => {
-    for (const [category, file] of Object.entries(docFiles)) {
+    const files = Object.entries(docFiles).filter(([, file]) => file);
+
+    if (!files.length) {
+      setUploadProgress({
+        active: false,
+        current: 0,
+        total: 0,
+        percent: 0,
+        fileName: "",
+        category: "",
+      });
+      return;
+    }
+
+    setUploadProgress({
+      active: true,
+      current: 0,
+      total: files.length,
+      percent: 0,
+      fileName: "",
+      category: "",
+    });
+
+    for (const [index, [category, file]] of files.entries()) {
       if (file) {
+        setUploadProgress({
+          active: true,
+          current: index + 1,
+          total: files.length,
+          percent: 0,
+          fileName: file.name,
+          category,
+        });
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('category', category);
+        formData.append("file", file);
+        formData.append("category", category);
         try {
           await axios.post(`/documents/upload/${empCode}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { "Content-Type": "multipart/form-data" },
+            onUploadProgress: (event) => {
+              if (!event.total) return;
+              const percent = Math.round((event.loaded / event.total) * 100);
+              setUploadProgress((current) => ({
+                ...current,
+                percent,
+              }));
+            },
           });
+          setUploadProgress((current) => ({
+            ...current,
+            percent: 100,
+          }));
         } catch (err) {
-          console.error('Failed to upload document:', category, err);
+          console.error("Failed to upload document:", category, err);
         }
       }
     }
+
+    setUploadProgress({
+      active: false,
+      current: files.length,
+      total: files.length,
+      percent: 100,
+      fileName: "",
+      category: "",
+    });
   };
 
   const submitForm = async (skipValidation = false) => {
@@ -629,17 +757,21 @@ const AddEmployee = () => {
         "tdsRegime",
         "form12bb",
       ];
-      const payload = pruneEmptyValues({
-        ...form,
-        emergencyContacts: emergency,
-        references: refs,
-        pendingSections: currentPendingSections,
-      }) || {};
+      const payload =
+        pruneEmptyValues({
+          ...form,
+          emergencyContacts: emergency,
+          references: refs,
+          pendingSections: currentPendingSections,
+        }) || {};
       OPTIONAL.forEach((k) => {
         if (!payload[k] || payload[k] === "") payload[k] = "not set yet";
       });
 
-      if (!payload.confirmationDate || payload.confirmationDate === "not set yet") {
+      if (
+        !payload.confirmationDate ||
+        payload.confirmationDate === "not set yet"
+      ) {
         delete payload.confirmationDate;
       }
 
@@ -653,12 +785,12 @@ const AddEmployee = () => {
         } catch {}
         localStorage.removeItem(DRAFT_KEY);
       }
-      
+
       const finalEmpCode = response.data?.emp_code || payload.emp_code;
       if (finalEmpCode) {
         await uploadDocuments(finalEmpCode);
       }
-      
+
       navigate("/employees");
     } catch (err) {
       setApiError(err.response?.data?.message || "Failed to save employee");
@@ -1269,7 +1401,8 @@ const AddEmployee = () => {
                     <input
                       type="date"
                       value={
-                        form.confirmationDate === "not set yet" || !form.confirmationDate
+                        form.confirmationDate === "not set yet" ||
+                        !form.confirmationDate
                           ? ""
                           : form.confirmationDate
                       }
@@ -1610,30 +1743,80 @@ const AddEmployee = () => {
               <div className="ae-section-title">
                 <span>📄</span> Upload Documents (Optional)
               </div>
+              {(uploadProgress.active || uploadProgress.total > 0) && (
+                <div className="ae-upload-progress" aria-live="polite">
+                  <div className="ae-upload-progress__top">
+                    <strong>
+                      {uploadProgress.active
+                        ? `Uploading ${DOCUMENT_CATEGORY_LABELS[uploadProgress.category] || uploadProgress.category || "document"}`
+                        : "Upload complete"}
+                    </strong>
+                    <span>
+                      {uploadProgress.current}/{uploadProgress.total}
+                    </span>
+                  </div>
+                  <div className="ae-upload-progress__file">
+                    {uploadProgress.fileName ||
+                      "Waiting for selected documents"}
+                  </div>
+                  <div className="ae-upload-progress__bar">
+                    <div
+                      className="ae-upload-progress__fill"
+                      style={{
+                        width: `${Math.max(0, Math.min(100, uploadProgress.percent))}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="ae-upload-progress__meta">
+                    <span>
+                      {Math.max(0, Math.min(100, uploadProgress.percent))}%
+                    </span>
+                    <span>
+                      {uploadProgress.active
+                        ? "Uploading selected files"
+                        : "All selected files uploaded"}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="ae-grid-2">
                 <Field label="Personal Identity Document">
                   <input
                     type="file"
                     accept="application/pdf,image/*"
-                    onChange={(e) => handleDocFileChange('personal_identity', e)}
+                    onChange={(e) =>
+                      handleDocFileChange("personal_identity", e)
+                    }
                   />
-                  {docFiles.personal_identity && <div style={{ fontSize: 12, marginTop: 4 }}>Selected: {docFiles.personal_identity.name}</div>}
+                  {docFiles.personal_identity && (
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      Selected: {docFiles.personal_identity.name}
+                    </div>
+                  )}
                 </Field>
                 <Field label="Onboarding Document">
                   <input
                     type="file"
                     accept="application/pdf,image/*"
-                    onChange={(e) => handleDocFileChange('onboarding', e)}
+                    onChange={(e) => handleDocFileChange("onboarding", e)}
                   />
-                  {docFiles.onboarding && <div style={{ fontSize: 12, marginTop: 4 }}>Selected: {docFiles.onboarding.name}</div>}
+                  {docFiles.onboarding && (
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      Selected: {docFiles.onboarding.name}
+                    </div>
+                  )}
                 </Field>
                 <Field label="Offboarding Document">
                   <input
                     type="file"
                     accept="application/pdf,image/*"
-                    onChange={(e) => handleDocFileChange('offboarding', e)}
+                    onChange={(e) => handleDocFileChange("offboarding", e)}
                   />
-                  {docFiles.offboarding && <div style={{ fontSize: 12, marginTop: 4 }}>Selected: {docFiles.offboarding.name}</div>}
+                  {docFiles.offboarding && (
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      Selected: {docFiles.offboarding.name}
+                    </div>
+                  )}
                 </Field>
               </div>
             </div>
@@ -1743,7 +1926,19 @@ const AddEmployee = () => {
 
       {/* Error Banner */}
       {apiError && (
-        <div style={{ padding: "12px 16px", background: "#fee2e2", color: "#b91c1c", borderRadius: 6, marginBottom: 20, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+        <div
+          style={{
+            padding: "12px 16px",
+            background: "#fee2e2",
+            color: "#b91c1c",
+            borderRadius: 6,
+            marginBottom: 20,
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
           <i className="ti ti-alert-circle" style={{ fontSize: 18 }} />
           <div>
             <strong>Error saving employee:</strong> {apiError}
@@ -1772,10 +1967,7 @@ const AddEmployee = () => {
 
         <div className="ae-nav-right">
           {STEPS[step].skippable && (
-            <button
-              className="ae-later-btn"
-              onClick={handleSkip}
-            >
+            <button className="ae-later-btn" onClick={handleSkip}>
               <i className="ti ti-clock" /> Skip for now — Add later
             </button>
           )}

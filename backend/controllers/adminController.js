@@ -1,19 +1,20 @@
 import UserModel from "../models/UserModel.js";
-import EmployeePersonalModel from "../models/EmployeePersonalModel.js";
-import EmployeeProfessionalModel from "../models/EmployeeProfessionalModel.js";
-import EmployeeAddressModel from "../models/EmployeeAddressModel.js";
-import EmployeeEmergencyModel from "../models/EmployeeEmergencyModel.js";
-import EmployeeBankModel from "../models/EmployeeBankModel.js";
-import EmployeePayrollModel from "../models/EmployeePayrollModel.js";
+import EmployeeModel from "../models/EmployeeModel.js";
 import EmployeeDraftModel from "../models/EmployeeDraftModel.js";
 import { generateEmpCode } from "../utils/empCodeUtils.js";
-import { DEPARTMENTS, DESIGNATIONS, EMPLOYMENT_TYPES } from "../config/constants.js";
-
-const NA = "not set yet";
-const isBlank = (val) => val === undefined || val === null || val === "" || val === NA;
-const cleanNA = (val) => (isBlank(val) ? undefined : val);
-const hasValue = (val) => !isBlank(val);
-const hasAnyValue = (...values) => values.some(hasValue);
+import {
+  DEPARTMENTS,
+  DESIGNATIONS,
+  EMPLOYMENT_TYPES,
+} from "../config/constants.js";
+import {
+  NA,
+  cleanNA,
+  hasAnyValue,
+  isBlank,
+  normalizeEmployeePayload,
+  appendPayrollHistoryIfChanged,
+} from "../utils/employeeCompat.js";
 
 const computePendingSections = (payload = {}) => {
   const pending = [];
@@ -21,7 +22,9 @@ const computePendingSections = (payload = {}) => {
   const reference = payload.references?.[0] || {};
 
   if (
-    [payload.fullName, payload.dob, payload.gender, payload.maritalStatus].some(isBlank)
+    [payload.fullName, payload.dob, payload.gender, payload.maritalStatus].some(
+      isBlank,
+    )
   ) {
     pending.push("identity");
   }
@@ -44,9 +47,8 @@ const computePendingSections = (payload = {}) => {
     pending.push("contact");
   }
 
-  if ([payload.aadharNumber, payload.panNumber].some(isBlank)) {
+  if ([payload.aadharNumber, payload.panNumber].some(isBlank))
     pending.push("government_id");
-  }
 
   if (
     [
@@ -88,6 +90,42 @@ const computePendingSections = (payload = {}) => {
 
   return pending;
 };
+
+const buildEmployeePayload = (payload, userId, emp_code, email) =>
+  normalizeEmployeePayload(payload, {
+    userId,
+    emp_code,
+    fullName: cleanNA(payload.fullName),
+    gender: cleanNA(payload.gender),
+    dob: cleanNA(payload.dob),
+    maritalStatus: cleanNA(payload.maritalStatus) || NA,
+    personalMobile: cleanNA(payload.personalMobile),
+    personalEmail: cleanNA(payload.personalEmail) || email,
+    bloodGroup: cleanNA(payload.bloodGroup) || NA,
+    aadharNumber: cleanNA(payload.aadharNumber),
+    panNumber: cleanNA(payload.panNumber),
+    highestQualification: cleanNA(payload.highestQualification),
+    graduationYear: cleanNA(payload.graduationYear),
+    instituteName: cleanNA(payload.instituteName),
+    currentAddress: payload.currentAddress || {},
+    sameAsCurrent: Boolean(payload.sameAsCurrent),
+    permanentAddress: payload.sameAsCurrent
+      ? payload.currentAddress || {}
+      : payload.permanentAddress || {},
+    emergencyContacts: (payload.emergencyContacts || []).filter((contact) =>
+      hasAnyValue(contact?.name, contact?.phone, contact?.relationship),
+    ),
+    references: (payload.references || []).filter((ref) =>
+      hasAnyValue(ref?.name, ref?.phone, ref?.email),
+    ),
+    officialEmail: cleanNA(payload.officialEmail) || email,
+    dateJoining: cleanNA(payload.dateJoining),
+    department: cleanNA(payload.department),
+    designation: cleanNA(payload.designation),
+    employmentType: cleanNA(payload.employmentType),
+    workLocation: cleanNA(payload.workLocation),
+    pendingSections: computePendingSections(payload),
+  });
 
 export const getRefData = (req, res) => {
   res.json({
@@ -144,17 +182,16 @@ export const deleteDraft = async (req, res) => {
 export const createEmployee = async (req, res) => {
   try {
     const payload = req.body;
-
     let emp_code = payload.emp_code;
+
     if (!emp_code || emp_code === NA || emp_code === "") {
       emp_code = await generateEmpCode();
     } else {
       const existingUser = await UserModel.findOne({ emp_code });
-      if (existingUser) {
+      if (existingUser)
         return res
           .status(400)
           .json({ message: "Employee code already exists" });
-      }
     }
 
     const emailStr =
@@ -164,153 +201,22 @@ export const createEmployee = async (req, res) => {
     const email = emailStr.toLowerCase().trim();
 
     const existingEmail = await UserModel.findOne({ email });
-    if (existingEmail) {
+    if (existingEmail)
       return res.status(400).json({ message: "Email already in use" });
-    }
 
     const pending = computePendingSections(payload);
-
-    const user = new UserModel({
+    const user = await UserModel.create({
       email,
       status: "approved",
       emp_code,
       pendingSections: pending,
     });
-    await user.save();
 
-    const userId = user._id;
-
-    if (
-      hasValue(payload.fullName) &&
-      hasValue(payload.gender) &&
-      hasValue(payload.dob) &&
-      hasValue(payload.personalMobile)
-    ) {
-      const personal = new EmployeePersonalModel({
-        userId,
-        emp_code,
-        fullName: cleanNA(payload.fullName),
-        gender: cleanNA(payload.gender),
-        dob: cleanNA(payload.dob),
-        mobile: cleanNA(payload.personalMobile),
-        personalEmail: cleanNA(payload.personalEmail),
-        bloodGroup: "O+",
-      });
-      await personal.save();
-    }
-
-    if (
-      hasAnyValue(
-        payload.currentAddress?.street,
-        payload.currentAddress?.city,
-        payload.currentAddress?.state,
-        payload.currentAddress?.pincode,
-        payload.permanentAddress?.street,
-        payload.permanentAddress?.city,
-        payload.permanentAddress?.state,
-        payload.permanentAddress?.pincode,
-      )
-    ) {
-      const address = new EmployeeAddressModel({
-        userId,
-        emp_code,
-        currentAddress: payload.currentAddress || {},
-        permanentAddress: payload.sameAsCurrent
-          ? payload.currentAddress
-          : payload.permanentAddress || {},
-      });
-      await address.save();
-    }
-
-    if (payload.emergencyContacts && payload.emergencyContacts.length > 0) {
-      const emg = payload.emergencyContacts[0];
-      if (hasAnyValue(emg.name, emg.relationship, emg.phone)) {
-        const emergency = new EmployeeEmergencyModel({
-          userId,
-          emp_code,
-          emergencyContact1: {
-            name: cleanNA(emg.name),
-            relationship: cleanNA(emg.relationship),
-            mobile: cleanNA(emg.phone),
-          },
-        });
-        await emergency.save();
-      }
-    }
-
-    if (
-      hasValue(payload.dateJoining) &&
-      hasValue(payload.department) &&
-      hasValue(payload.designation) &&
-      hasValue(payload.officialEmail)
-    ) {
-      const professional = new EmployeeProfessionalModel({
-        userId,
-        emp_code,
-        dateJoined: cleanNA(payload.dateJoining),
-        department: cleanNA(payload.department),
-        jobTitle: cleanNA(payload.designation),
-        employmentType: cleanNA(payload.employmentType),
-        workEmail: cleanNA(payload.officialEmail) || email,
-        reportingManager: cleanNA(payload.reportingManager),
-        inProbation: true,
-      });
-      await professional.save();
-    }
-
-    if (
-      hasAnyValue(
-        payload.panNumber,
-        payload.aadharNumber,
-        payload.accountHolderName,
-        payload.bankNameBranch,
-        payload.accountNumber,
-        payload.ifscCode,
-      )
-    ) {
-      const bank = new EmployeeBankModel({
-        userId,
-        emp_code,
-        panNumber: cleanNA(payload.panNumber),
-        aadharNumber: cleanNA(payload.aadharNumber),
-        bankName: cleanNA(payload.bankNameBranch),
-        accountHolderName: cleanNA(payload.accountHolderName),
-        personalAccountNumber: cleanNA(payload.accountNumber),
-        personalIfsc: cleanNA(payload.ifscCode),
-      });
-      await bank.save();
-    }
-
-    const grossStr = cleanNA(payload.gross);
-    const ctcStr = cleanNA(payload.ctc);
-
-    if (grossStr && ctcStr) {
-      const grossNum = grossStr ? Number(grossStr) : undefined;
-      const ctcNum = ctcStr ? Number(ctcStr) : undefined;
-      const pfVal = payload.pfApplicable || false;
-      const esicVal = payload.esicApplicable || false;
-      const ptVal = payload.ptApplicable || false;
-
-      const payroll = new EmployeePayrollModel({
-        userId,
-        emp_code,
-        gross: grossNum,
-        ctc: ctcNum,
-        pf: pfVal,
-        esic: esicVal,
-        pt: ptVal,
-        history: [{
-          gross: grossNum,
-          ctc: ctcNum,
-          pf: pfVal,
-          esic: esicVal,
-          pt: ptVal,
-          changeType: 'initial setup',
-          updatedAt: new Date()
-        }]
-      });
-      await payroll.save();
-    }
+    const employee = new EmployeeModel(
+      buildEmployeePayload(payload, user._id, emp_code, email),
+    );
+    appendPayrollHistoryIfChanged(employee, payload, "initial setup");
+    await employee.save();
 
     res.status(201).json({
       message: "Employee added successfully",
@@ -330,211 +236,47 @@ export const createEmployee = async (req, res) => {
   }
 };
 
-/**
- * @desc   Update an existing employee (called from AddEmployee.js edit mode)
- * @route  PUT /api/admin/employees/:id
- */
 export const updateEmployee = async (req, res) => {
   try {
     const payload = req.body;
     const user = await UserModel.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "Employee not found" });
 
-    const userId = user._id;
-    const emp_code = user.emp_code;
     const pending = computePendingSections(payload);
-
     user.pendingSections = pending;
     user.status = "approved";
     await user.save();
 
-    // ── Personal ─────────────────────────────────────────────────
-    if (
-      hasValue(payload.fullName) &&
-      hasValue(payload.gender) &&
-      hasValue(payload.dob) &&
-      hasValue(payload.personalMobile)
-    ) {
-      await EmployeePersonalModel.findOneAndUpdate(
-        { userId },
-        {
-          emp_code,
-          fullName: cleanNA(payload.fullName),
-          gender: cleanNA(payload.gender),
-          dob: cleanNA(payload.dob),
-          maritalStatus: cleanNA(payload.maritalStatus),
-          religion: cleanNA(payload.religion),
-          physicallyHandicapped: cleanNA(payload.physicallyHandicapped),
-          mobile: cleanNA(payload.personalMobile),
-          personalEmail: cleanNA(payload.personalEmail),
-        },
-        { upsert: true, new: true }
-      );
+    const email = (
+      cleanNA(payload.officialEmail) ||
+      cleanNA(payload.personalEmail) ||
+      user.email
+    )
+      .toLowerCase()
+      .trim();
+    if (email !== user.email) {
+      const existingEmail = await UserModel.findOne({
+        email,
+        _id: { $ne: user._id },
+      });
+      if (existingEmail)
+        return res.status(400).json({ message: "Email already in use" });
+      user.email = email;
+      await user.save();
     }
 
-    // ── Address & Emergency ───────────────────────────────────────
-    if (
-      hasAnyValue(
-        payload.currentAddress?.street,
-        payload.currentAddress?.city,
-        payload.currentAddress?.state,
-        payload.currentAddress?.pincode,
-        payload.permanentAddress?.street,
-        payload.permanentAddress?.city,
-        payload.permanentAddress?.state,
-        payload.permanentAddress?.pincode,
-      )
-    ) {
-      await EmployeeAddressModel.findOneAndUpdate(
-        { userId },
-        {
-          emp_code,
-          currentAddress: payload.currentAddress || {},
-          permanentAddress: payload.sameAsCurrent
-            ? payload.currentAddress
-            : payload.permanentAddress || {},
-        },
-        { upsert: true, new: true }
-      );
+    let employee = await EmployeeModel.findOne({
+      $or: [{ userId: user._id }, { emp_code: user.emp_code }],
+    });
+    if (!employee)
+      employee = new EmployeeModel({
+        userId: user._id,
+        emp_code: user.emp_code,
+      });
 
-    }
-
-    if (payload.emergencyContacts?.length > 0) {
-      const emg = payload.emergencyContacts[0];
-      if (hasAnyValue(emg.name, emg.relationship, emg.phone)) {
-        await EmployeeEmergencyModel.findOneAndUpdate(
-          { userId },
-          {
-            emp_code,
-            emergencyContact1: {
-              name: cleanNA(emg.name),
-              relationship: cleanNA(emg.relationship),
-              mobile: cleanNA(emg.phone),
-            },
-          },
-          { upsert: true, new: true }
-        );
-      }
-    }
-
-    // ── Professional ─────────────────────────────────────────────
-    if (
-      emp_code &&
-      hasValue(payload.dateJoining) &&
-      hasValue(payload.department) &&
-      hasValue(payload.designation) &&
-      hasValue(payload.officialEmail)
-    ) {
-      await EmployeeProfessionalModel.findOneAndUpdate(
-        { $or: [{ userId }, { emp_code }] },
-        {
-          userId,
-          emp_code,
-          dateJoined: cleanNA(payload.dateJoining),
-          department: cleanNA(payload.department),
-          jobTitle: cleanNA(payload.designation),
-          employmentType: cleanNA(payload.employmentType),
-          workEmail: cleanNA(payload.officialEmail),
-          reportingManager: cleanNA(payload.reportingManager),
-          workMobile: cleanNA(payload.workMobile),
-        },
-        { upsert: true, new: true }
-      );
-    }
-
-    // ── Bank & Payroll ────────────────────────────────────────────
-    if (
-      emp_code &&
-      hasAnyValue(
-        payload.panNumber,
-        payload.aadharNumber,
-        payload.accountHolderName,
-        payload.bankNameBranch,
-        payload.accountNumber,
-        payload.ifscCode,
-      )
-    ) {
-      await EmployeeBankModel.findOneAndUpdate(
-        { $or: [{ userId }, { emp_code }] },
-        {
-          userId,
-          emp_code,
-          panNumber: cleanNA(payload.panNumber),
-          aadharNumber: cleanNA(payload.aadharNumber),
-          bankName: cleanNA(payload.bankNameBranch),
-          accountHolderName: cleanNA(payload.accountHolderName),
-          personalAccountNumber: cleanNA(payload.accountNumber),
-          personalIfsc: cleanNA(payload.ifscCode),
-        },
-        { upsert: true, new: true }
-      );
-
-    }
-
-    const grossStr = cleanNA(payload.gross);
-    const ctcStr = cleanNA(payload.ctc);
-
-    if (emp_code && grossStr && ctcStr) {
-      const grossNum = grossStr ? Number(grossStr) : undefined;
-      const ctcNum = ctcStr ? Number(ctcStr) : undefined;
-      const pfVal = payload.pfApplicable || false;
-      const esicVal = payload.esicApplicable || false;
-      const ptVal = payload.ptApplicable || false;
-
-      let payrollDoc = await EmployeePayrollModel.findOne({ $or: [{ userId }, { emp_code }] });
-      
-      if (!payrollDoc) {
-        payrollDoc = new EmployeePayrollModel({
-          userId,
-          emp_code,
-          gross: grossNum,
-          ctc: ctcNum,
-          pf: pfVal,
-          esic: esicVal,
-          pt: ptVal,
-          history: [{
-            gross: grossNum,
-            ctc: ctcNum,
-            pf: pfVal,
-            esic: esicVal,
-            pt: ptVal,
-            changeType: 'initial setup',
-            updatedAt: new Date()
-          }]
-        });
-        await payrollDoc.save();
-      } else {
-        const changed = payrollDoc.gross !== grossNum || 
-                        payrollDoc.ctc !== ctcNum || 
-                        payrollDoc.pf !== pfVal || 
-                        payrollDoc.esic !== esicVal || 
-                        payrollDoc.pt !== ptVal;
-                        
-        if (changed) {
-          payrollDoc.gross = grossNum;
-          payrollDoc.ctc = ctcNum;
-          payrollDoc.pf = pfVal;
-          payrollDoc.esic = esicVal;
-          payrollDoc.pt = ptVal;
-          
-          if (!payrollDoc.history) {
-            payrollDoc.history = [];
-          }
-          
-          payrollDoc.history.push({
-            gross: grossNum,
-            ctc: ctcNum,
-            pf: pfVal,
-            esic: esicVal,
-            pt: ptVal,
-            changeType: 'updated by admin',
-            updatedAt: new Date()
-          });
-          
-          await payrollDoc.save();
-        }
-      }
-    }
+    employee.set(buildEmployeePayload(payload, user._id, user.emp_code, email));
+    appendPayrollHistoryIfChanged(employee, payload);
+    await employee.save();
 
     res.json({
       message: "Employee updated successfully",

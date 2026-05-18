@@ -1,65 +1,68 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import './Documents.css';
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import "./Documents.css";
 
 const fieldLabels = {
-  name: 'Name',
-  gender: 'Gender',
-  internType: 'Job Type',
-  durationType: 'Duration Type',
-  duration: 'Duration',
-  role: 'Role',
-  startDate: 'Start Date',
-  endDate: 'End Date',
-  salaryType: 'Salary Type',
-  salaryAmount: 'Salary Amount',
-  companyName: 'Company Name',
-  signatoryName: 'Signatory Name',
-  signatoryTitle: 'Signatory Title'
+  name: "Name",
+  gender: "Gender",
+  internType: "Job Type",
+  durationType: "Duration Type",
+  duration: "Duration",
+  role: "Role",
+  startDate: "Start Date",
+  endDate: "End Date",
+  salaryType: "Salary Type",
+  salaryAmount: "Salary Amount",
+  companyName: "Company Name",
+  signatoryName: "Signatory Name",
+  signatoryTitle: "Signatory Title",
 };
 
+const getDesignation = (employee) =>
+  employee.professional?.designation || employee.professional?.jobTitle || "";
+
 const initialForm = {
-  name: '',
-  gender: '',
-  internType: 'internship',
-  durationType: 'month',
-  duration: '',
-  role: '',
-  startDate: '',
-  endDate: '',
-  salaryType: 'paid',
-  salaryAmount: '',
-  companyName: 'SAECULUM SOLUTIONS PVT LTD',
-  signatoryName: 'HARDIKKUMAR VINZAVA',
-  signatoryTitle: 'DIRECTOR'
+  name: "",
+  gender: "",
+  internType: "internship",
+  durationType: "month",
+  duration: "",
+  role: "",
+  startDate: "",
+  endDate: "",
+  salaryType: "paid",
+  salaryAmount: "",
+  companyName: "SAECULUM SOLUTIONS PVT LTD",
+  signatoryName: "HARDIKKUMAR VINZAVA",
+  signatoryTitle: "DIRECTOR",
 };
 
 function Documents() {
   const navigate = useNavigate();
   const [documentTypes, setDocumentTypes] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [selectedType, setSelectedType] = useState('offer-letter');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState("offer-letter");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [form, setForm] = useState(initialForm);
   const [missingFields, setMissingFields] = useState([]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [preparing, setPreparing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadData() {
       try {
         const [typesResponse, employeesResponse] = await Promise.all([
-          axios.get('/documents/types'),
-          axios.get('/employees/all')
+          axios.get("/documents/types"),
+          axios.get("/employees/all"),
         ]);
         setDocumentTypes(typesResponse.data);
         setEmployees(employeesResponse.data);
       } catch (err) {
-        setError('Failed to load document setup.');
+        setError("Failed to load document setup.");
       } finally {
         setLoading(false);
       }
@@ -69,26 +72,34 @@ function Documents() {
 
   const filteredEmployees = useMemo(() => {
     const value = searchTerm.toLowerCase();
-    return employees.filter((employee) => (
-      employee.personal?.fullName?.toLowerCase().includes(value) ||
-      employee.user?.emp_code?.toLowerCase().includes(value) ||
-      employee.user?.email?.toLowerCase().includes(value) ||
-      employee.professional?.jobTitle?.toLowerCase().includes(value)
-    ));
+    return employees.filter(
+      (employee) =>
+        employee.personal?.fullName?.toLowerCase().includes(value) ||
+        employee.user?.emp_code?.toLowerCase().includes(value) ||
+        employee.user?.email?.toLowerCase().includes(value) ||
+        getDesignation(employee).toLowerCase().includes(value),
+    );
   }, [employees, searchTerm]);
 
-  const selectedEmployee = employees.find((employee) => employee.user.id === selectedEmployeeId);
+  const selectedEmployee = employees.find(
+    (employee) => employee.user.id === selectedEmployeeId,
+  );
 
   const inspectEmployee = async (employeeId) => {
     try {
-      setError('');
+      setError("");
       setSelectedEmployeeId(employeeId);
-      const response = await axios.get(`/documents/offer-letter/${employeeId}/inspect`);
+      const response = await axios.get(
+        `/documents/offer-letter/${employeeId}/inspect`,
+      );
       setForm({ ...initialForm, ...response.data.values });
       setMissingFields(response.data.missingFields || []);
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to inspect employee information.');
+      setError(
+        err.response?.data?.message ||
+          "Failed to inspect employee information.",
+      );
     }
   };
 
@@ -100,18 +111,21 @@ function Documents() {
   const prepareDocument = async () => {
     try {
       setPreparing(true);
-      setError('');
-      const response = await axios.post(`/documents/offer-letter/${selectedEmployeeId}/prepare`, form);
-      navigate('/documents/editor', {
+      setError("");
+      const response = await axios.post(
+        `/documents/offer-letter/${selectedEmployeeId}/prepare`,
+        form,
+      );
+      navigate("/documents/editor", {
         state: {
           pages: response.data.data.pages,
           metadata: response.data.data.metadata,
-          documentType: selectedType
-        }
+          documentType: selectedType,
+        },
       });
     } catch (err) {
       setMissingFields(err.response?.data?.missingFields || []);
-      setError(err.response?.data?.message || 'Failed to prepare document.');
+      setError(err.response?.data?.message || "Failed to prepare document.");
     } finally {
       setPreparing(false);
     }
@@ -125,7 +139,10 @@ function Documents() {
         <div className="page-header-row">
           <div>
             <h1>Generate Documents</h1>
-            <p>Select a document type, choose an employee, complete details, then edit and compile.</p>
+            <p>
+              Select a document type, choose an employee, complete details, then
+              edit and compile.
+            </p>
           </div>
         </div>
       </div>
@@ -133,8 +150,11 @@ function Documents() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="doc-steps" aria-label="Document generation progress">
-        {['Document', 'Employee', 'Details', 'Editor'].map((label, index) => (
-          <div key={label} className={`doc-step ${step >= index + 1 ? 'doc-step--active' : ''}`}>
+        {["Document", "Employee", "Details", "Editor"].map((label, index) => (
+          <div
+            key={label}
+            className={`doc-step ${step >= index + 1 ? "doc-step--active" : ""}`}
+          >
             <span>{index + 1}</span>
             <strong>{label}</strong>
           </div>
@@ -149,18 +169,26 @@ function Documents() {
               <button
                 key={type.id}
                 type="button"
-                className={`document-type ${selectedType === type.id ? 'document-type--selected' : ''}`}
+                className={`document-type ${selectedType === type.id ? "document-type--selected" : ""}`}
                 disabled={!type.available}
                 onClick={() => setSelectedType(type.id)}
               >
                 <span>{type.label}</span>
-                <small>{type.available ? 'Available now' : 'Coming next'}</small>
+                <small>
+                  {type.available ? "Available now" : "Coming next"}
+                </small>
               </button>
             ))}
           </div>
           <div className="wizard-buttons">
             <span />
-            <button type="button" className="btn btn-primary" onClick={() => setStep(2)}>Continue</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setStep(2)}
+            >
+              Continue
+            </button>
           </div>
         </div>
       )}
@@ -184,19 +212,27 @@ function Documents() {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Email</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
+                  <th style={{ textAlign: "right" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmployees.map((employee) => (
                   <tr key={employee.user.id}>
                     <td>{employee.user.emp_code}</td>
-                    <td className="cell-title">{employee.personal?.fullName || 'N/A'}</td>
-                    <td>{employee.professional?.jobTitle || 'N/A'}</td>
+                    <td className="cell-title">
+                      {employee.personal?.fullName || "N/A"}
+                    </td>
+                    <td>{getDesignation(employee) || "N/A"}</td>
                     <td>{employee.user.email}</td>
                     <td>
                       <div className="table-actions">
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => inspectEmployee(employee.user.id)}>Choose</button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => inspectEmployee(employee.user.id)}
+                        >
+                          Choose
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -205,7 +241,13 @@ function Documents() {
             </table>
           </div>
           <div className="wizard-buttons">
-            <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>Back</button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setStep(1)}
+            >
+              Back
+            </button>
             <span />
           </div>
         </div>
@@ -216,23 +258,38 @@ function Documents() {
           <h3>Complete Offer Letter Details</h3>
           {selectedEmployee && (
             <div className="selected-employee-strip">
-              <strong>{selectedEmployee.personal?.fullName || selectedEmployee.user.email}</strong>
+              <strong>
+                {selectedEmployee.personal?.fullName ||
+                  selectedEmployee.user.email}
+              </strong>
               <span>{selectedEmployee.user.emp_code}</span>
-              <span>{selectedEmployee.professional?.jobTitle || 'Role pending'}</span>
+              <span>{getDesignation(selectedEmployee) || "Role pending"}</span>
             </div>
           )}
 
           {missingFields.length > 0 && (
             <div className="alert alert-warning">
-              Missing: {missingFields.map((field) => fieldLabels[field] || field).join(', ')}
+              Missing:{" "}
+              {missingFields
+                .map((field) => fieldLabels[field] || field)
+                .join(", ")}
             </div>
           )}
 
           <div className="grid-3">
-            <div className="form-group"><label>Name</label><input value={form.name} onChange={(event) => updateField('name', event.target.value)} /></div>
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                value={form.name}
+                onChange={(event) => updateField("name", event.target.value)}
+              />
+            </div>
             <div className="form-group">
               <label>Gender</label>
-              <select value={form.gender} onChange={(event) => updateField('gender', event.target.value)}>
+              <select
+                value={form.gender}
+                onChange={(event) => updateField("gender", event.target.value)}
+              >
                 <option value="">Select gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -240,7 +297,12 @@ function Documents() {
             </div>
             <div className="form-group">
               <label>Job Type</label>
-              <select value={form.internType} onChange={(event) => updateField('internType', event.target.value)}>
+              <select
+                value={form.internType}
+                onChange={(event) =>
+                  updateField("internType", event.target.value)
+                }
+              >
                 <option value="internship">Internship</option>
                 <option value="part time">Part Time</option>
                 <option value="full time">Full Time</option>
@@ -248,34 +310,119 @@ function Documents() {
             </div>
             <div className="form-group">
               <label>Duration Type</label>
-              <select value={form.durationType} onChange={(event) => updateField('durationType', event.target.value)}>
+              <select
+                value={form.durationType}
+                onChange={(event) =>
+                  updateField("durationType", event.target.value)
+                }
+              >
                 <option value="month">Month</option>
                 <option value="year">Year</option>
               </select>
             </div>
-            <div className="form-group"><label>Duration</label><input type="number" min="1" value={form.duration} onChange={(event) => updateField('duration', event.target.value)} /></div>
-            <div className="form-group"><label>Role</label><input value={form.role} onChange={(event) => updateField('role', event.target.value)} /></div>
-            <div className="form-group"><label>Start Date</label><input type="date" value={form.startDate} onChange={(event) => updateField('startDate', event.target.value)} /></div>
-            <div className="form-group"><label>End Date</label><input type="date" value={form.endDate} onChange={(event) => updateField('endDate', event.target.value)} /></div>
+            <div className="form-group">
+              <label>Duration</label>
+              <input
+                type="number"
+                min="1"
+                value={form.duration}
+                onChange={(event) =>
+                  updateField("duration", event.target.value)
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Role</label>
+              <input
+                value={form.role}
+                onChange={(event) => updateField("role", event.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Start Date</label>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(event) =>
+                  updateField("startDate", event.target.value)
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>End Date</label>
+              <input
+                type="date"
+                value={form.endDate}
+                onChange={(event) => updateField("endDate", event.target.value)}
+              />
+            </div>
             <div className="form-group">
               <label>Salary Type</label>
-              <select value={form.salaryType} onChange={(event) => updateField('salaryType', event.target.value)}>
+              <select
+                value={form.salaryType}
+                onChange={(event) =>
+                  updateField("salaryType", event.target.value)
+                }
+              >
                 <option value="paid">Paid</option>
                 <option value="unpaid">Unpaid</option>
               </select>
             </div>
-            {form.salaryType === 'paid' && (
-              <div className="form-group"><label>Salary Amount</label><input value={form.salaryAmount} onChange={(event) => updateField('salaryAmount', event.target.value)} /></div>
+            {form.salaryType === "paid" && (
+              <div className="form-group">
+                <label>Salary Amount</label>
+                <input
+                  value={form.salaryAmount}
+                  onChange={(event) =>
+                    updateField("salaryAmount", event.target.value)
+                  }
+                />
+              </div>
             )}
-            <div className="form-group"><label>Company Name</label><input value={form.companyName} onChange={(event) => updateField('companyName', event.target.value)} /></div>
-            <div className="form-group"><label>Signatory</label><input value={form.signatoryName} onChange={(event) => updateField('signatoryName', event.target.value)} /></div>
-            <div className="form-group"><label>Signatory Title</label><input value={form.signatoryTitle} onChange={(event) => updateField('signatoryTitle', event.target.value)} /></div>
+            <div className="form-group">
+              <label>Company Name</label>
+              <input
+                value={form.companyName}
+                onChange={(event) =>
+                  updateField("companyName", event.target.value)
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Signatory</label>
+              <input
+                value={form.signatoryName}
+                onChange={(event) =>
+                  updateField("signatoryName", event.target.value)
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Signatory Title</label>
+              <input
+                value={form.signatoryTitle}
+                onChange={(event) =>
+                  updateField("signatoryTitle", event.target.value)
+                }
+              />
+            </div>
           </div>
 
           <div className="wizard-buttons">
-            <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>Back</button>
-            <button type="button" className="btn btn-primary" onClick={prepareDocument} disabled={preparing}>
-              {preparing ? 'Preparing...' : 'Open Advanced Editor'}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setStep(2)}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={prepareDocument}
+              disabled={preparing}
+            >
+              {preparing ? "Preparing..." : "Open Advanced Editor"}
             </button>
           </div>
         </div>

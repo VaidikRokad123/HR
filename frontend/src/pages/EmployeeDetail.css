@@ -318,6 +318,49 @@
   flex-wrap: wrap;
 }
 
+.ed-completion-summary {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ed-completion-summary__row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.ed-completion-summary__label {
+  color: var(--color-text-muted);
+}
+
+.ed-completion-summary__value {
+  color: var(--color-text);
+  line-height: 1.35;
+}
+
+.ed-completion-summary__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ed-completion-chip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ed-completion-chip.is-complete {
+  background: rgba(31, 139, 76, 0.12);
+  color: #1f8b4c;
+}
+
 .ed-sensitive-actions input {
   width: 150px;
   height: 38px;

@@ -1,183 +1,108 @@
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import { fileURLToPath } from 'url';
-import UserModel from '../models/UserModel.js';
-import CounterModel from '../models/CounterModel.js';
-import EmployeePersonalModel from '../models/EmployeePersonalModel.js';
-import EmployeeFamilyModel from '../models/EmployeeFamilyModel.js';
-import EmployeeAddressModel from '../models/EmployeeAddressModel.js';
-import EmployeeEmergencyModel from '../models/EmployeeEmergencyModel.js';
-import EmployeeProfessionalModel from '../models/EmployeeProfessionalModel.js';
-import EmployeeBankModel from '../models/EmployeeBankModel.js';
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import { fileURLToPath } from "url";
+import UserModel from "../models/UserModel.js";
+import CounterModel from "../models/CounterModel.js";
+import EmployeeModel from "../models/EmployeeModel.js";
 
-dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
+dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
 const seedHR = async () => {
   try {
-    // Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      dbName: process.env.MONGODB_DB_NAME
+      dbName: process.env.MONGODB_DB_NAME,
     });
-    console.log('MongoDB Connected');
+    console.log("MongoDB Connected");
 
-    // Initialize employee code counter
-    const existingCounter = await CounterModel.findOne({ name: 'emp_code' });
-    if (!existingCounter) {
-      await CounterModel.create({ name: 'emp_code', value: 0 });
-      console.log('✅ Employee code counter initialized');
-    } else {
-      console.log('✅ Employee code counter already exists (current value: ' + existingCounter.value + ')');
-    }
+    const existingCounter = await CounterModel.findOne({ name: "emp_code" });
+    if (!existingCounter)
+      await CounterModel.create({ name: "emp_code", value: 0 });
 
-    // Check if HR user already exists by email
-    const existingHR = await UserModel.findOne({ email: 'vaidik@saeculum.com' });
-    
+    const existingHR = await UserModel.findOne({
+      email: "vaidik@saeculum.com",
+    });
     if (existingHR) {
-      console.log('✅ HR user already exists by email!');
-      console.log('Email: vaidik@saeculum.com');
-      console.log('Employee Code: ' + existingHR.emp_code);
-      
-      console.log('\n📊 Database Status:');
-      console.log('- HR user: ✓');
-      console.log('- Counter initialized: ✓');
+      console.log("✅ HR user already exists by email!");
+      console.log("Email: vaidik@saeculum.com");
+      console.log("Employee Code: " + existingHR.emp_code);
       process.exit(0);
     }
 
-    const emp_code = 'EMP0001';
-
-    // Check if the emp_code is already taken by someone else and clean it up
+    const emp_code = "EMP0001";
     const existingEmpCode = await UserModel.findOne({ emp_code });
     if (existingEmpCode) {
-      console.log(`⚠️ User with ${emp_code} already exists (Email: ${existingEmpCode.email}). Cleaning up existing data...`);
+      console.log(
+        `⚠️ User with ${emp_code} already exists. Cleaning up existing data...`,
+      );
       await UserModel.deleteOne({ emp_code });
-      await EmployeePersonalModel.deleteOne({ emp_code });
-      await EmployeeFamilyModel.deleteOne({ emp_code });
-      await EmployeeAddressModel.deleteOne({ emp_code });
-      await EmployeeEmergencyModel.deleteOne({ emp_code });
-      await EmployeeProfessionalModel.deleteOne({ emp_code });
-      await EmployeeBankModel.deleteOne({ emp_code });
+      await EmployeeModel.deleteOne({ emp_code });
     }
 
-    // Ensure counter is updated to at least 2 so future employees get EMP0003+
-    const counter = await CounterModel.findOne({ name: 'emp_code' });
-    if (counter && counter.value < 2) {
-      await CounterModel.findOneAndUpdate({ name: 'emp_code' }, { value: 2 });
-    }
-    
-    // Create HR user with employee code
+    const counter = await CounterModel.findOne({ name: "emp_code" });
+    if (counter && counter.value < 2)
+      await CounterModel.findOneAndUpdate({ name: "emp_code" }, { value: 2 });
+
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash('vaidik123', salt);
+    const passwordHash = await bcrypt.hash("vaidik123", salt);
 
-    const hrUser = new UserModel({
-      email: 'vaidik@saeculum.com',
+    const hrUser = await UserModel.create({
+      email: "vaidik@saeculum.com",
       passwordHash,
-      role: 'hr',
-      emp_code: emp_code,
-      status: 'approved'
+      role: "hr",
+      emp_code,
+      status: "approved",
     });
 
-    await hrUser.save();
-
-    // Create personal details for HR
-    const hrPersonal = new EmployeePersonalModel({
+    await EmployeeModel.create({
       userId: hrUser._id,
-      emp_code: emp_code,
-      fullName: 'Vaidik',
-      gender: 'Male',
-      dob: new Date('2005-12-04'),
-      age: 20,
-      mobile: '9408534410',
-      personalEmail: 'vaidik@saeculum.com',
-      bloodGroup: 'O+'
-    });
-    await hrPersonal.save();
-
-    // Create family details for HR
-    const hrFamily = new EmployeeFamilyModel({
-      userId: hrUser._id,
-      emp_code: emp_code,
-      fatherName: 'M',
-      motherName: 'R',
-      maritalStatus: 'Single'
-    });
-    await hrFamily.save();
-
-    // Create address details for HR
-    const hrAddress = new EmployeeAddressModel({
-      userId: hrUser._id,
-      emp_code: emp_code,
+      emp_code,
+      fullName: "Vaidik",
+      gender: "Male",
+      dob: new Date("2005-12-04"),
+      maritalStatus: "Single",
+      personalMobile: "9408534410",
+      personalEmail: "vaidik@saeculum.com",
+      bloodGroup: "O+",
       currentAddress: {
-        street: '1',
-        city: 'Amreli',
-        state: 'Gujarat',
-        pincode: '365601',
-        country: 'India'
+        street: "1",
+        city: "Amreli",
+        state: "Gujarat",
+        pincode: "365601",
+        country: "India",
       },
-      permanentAddress: {
-        street: '1',
-        city: 'Amreli',
-        state: 'Gujarat',
-        pincode: '365601',
-        country: 'India'
-      }
+      sameAsCurrent: true,
+      emergencyContacts: [
+        { name: "Vivek", relationship: "Bro", phone: "9408534410" },
+      ],
+      aadharNumber: "not set yet",
+      panNumber: "not set yet",
+      highestQualification: "not set yet",
+      graduationYear: 2023,
+      instituteName: "not set yet",
+      dateJoining: new Date("2012-12-12"),
+      department: "Human Resources",
+      designation: "Sr. Human Resource Executive",
+      reportingManager: "P",
+      officialEmail: "vaidik@saeculum.com",
+      employmentType: "Permanent",
+      workLocation: "Office",
+      linkedinUrl: "https://www.linkedin.com/in/vaidik",
+      bankNameBranch: "Saeculum Bank",
+      branch: "Amreli Branch",
+      accountNumber: "1234567890",
+      ifscCode: "SAEC0001234",
     });
-    await hrAddress.save();
 
-    // Create emergency contact for HR
-    const hrEmergency = new EmployeeEmergencyModel({
-      userId: hrUser._id,
-      emp_code: emp_code,
-      emergencyContact1: {
-        name: 'Vivek',
-        relationship: 'Bro',
-        mobile: '9408534410'
-      }
-    });
-    await hrEmergency.save();
-
-    // Create professional details for HR
-    const hrProfessional = new EmployeeProfessionalModel({
-      userId: hrUser._id,
-      emp_code: emp_code,
-      nameAsPerAadhaar: 'Vaidik',
-      dateJoined: new Date('2012-12-12'),
-      department: 'Human Resources',
-      jobTitle: 'Sr. Human Resource Executive',
-      reportingManager: 'P',
-      workEmail: 'vaidik@saeculum.com',
-      attendanceBiometricId: 'EMP0001',
-      inProbation: true,
-      linkedinUrl: 'https://www.linkedin.com/in/vaidik'
-    });
-    await hrProfessional.save();
-
-    // Create bank details for HR
-    const hrBank = new EmployeeBankModel({
-      userId: hrUser._id,
-      emp_code: emp_code,
-      bankName: 'Saeculum Bank',
-      branch: 'Amreli Branch',
-      personalAccountNumber: '1234567890',
-      personalIfsc: 'SAEC0001234',
-    });
-    await hrBank.save();
-
-    console.log('\n✅ HR user created successfully with complete profile!');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧 Email: vaidik@saeculum.com');
-    console.log('🔑 Password: vaidik123');
-    console.log('👤 Employee Code: ' + emp_code);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('\n⚠️  IMPORTANT: Change the default password in production!');
-    console.log('\n✓ You can now login with these credentials.');
-    console.log('✓ HR user has complete employee profile (personal, family, address, emergency, professional, bank)');
-
+    console.log(
+      "\n✅ HR user created successfully with EmployeeModel profile!",
+    );
+    console.log("📧 Email: vaidik@saeculum.com");
+    console.log("🔑 Password: vaidik123");
+    console.log("👤 Employee Code: " + emp_code);
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error seeding HR user:', error);
+    console.error("❌ Error seeding HR user:", error);
     process.exit(1);
   }
 };

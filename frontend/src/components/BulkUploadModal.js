@@ -3,6 +3,47 @@ import * as XLSX from "xlsx";
 import axios from "axios";
 import "./BulkUploadModal.css";
 
+const toEmployeeModelPayload = (emp) => ({
+  emp_code: emp.emp_code,
+  user: emp.user,
+  personal: {
+    ...emp.personal,
+    personalMobile: emp.personal?.personalMobile || emp.personal?.mobile || "",
+  },
+  professional: {
+    ...emp.professional,
+    designation:
+      emp.professional?.designation || emp.professional?.jobTitle || "",
+    dateJoining:
+      emp.professional?.dateJoining || emp.professional?.dateJoined || "",
+    officialEmail:
+      emp.professional?.officialEmail || emp.professional?.workEmail || "",
+    probationMonths:
+      emp.professional?.probationMonths ?? emp.professional?.probationDuration,
+  },
+  family: emp.family,
+  address: emp.address,
+  bank: {
+    ...emp.bank,
+    bankNameBranch: emp.bank?.bankNameBranch || emp.bank?.bankName || "",
+    accountNumber:
+      emp.bank?.accountNumber || emp.bank?.personalAccountNumber || "",
+    ifscCode: emp.bank?.ifscCode || emp.bank?.personalIfsc || "",
+  },
+  emergency: {
+    emergencyContacts: [
+      emp.emergency?.emergencyContact1,
+      emp.emergency?.emergencyContact2,
+    ]
+      .filter(Boolean)
+      .map((contact) => ({
+        name: contact.name || "",
+        relationship: contact.relationship || "",
+        phone: contact.phone || contact.mobile || "",
+      })),
+  },
+});
+
 const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   const [activeTab, setActiveTab] = useState("upload");
   const [file, setFile] = useState(null);
@@ -79,21 +120,26 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
 
           formattedData = rawData.map((row) => ({
             user: {
-              email: row.Email || row.PersonalEmail || row.WorkEmail || "",
+              email:
+                row.Email ||
+                row.PersonalEmail ||
+                row.OfficialEmail ||
+                row.WorkEmail ||
+                "",
             },
             personal: {
               fullName: row.FullName || row.Name || "",
               gender: row.Gender || "",
               dob: row.DOB || "",
-              mobile: row.Mobile || row.Phone || "",
+              mobile: row.PersonalMobile || row.Mobile || row.Phone || "",
               personalEmail: row.PersonalEmail || row.Email || "",
               bloodGroup: row.BloodGroup || "",
             },
             professional: {
               department: row.Department || "",
-              jobTitle: row.JobTitle || "",
-              dateJoined: row.DateJoined || "",
-              workEmail: row.WorkEmail || "",
+              jobTitle: row.Designation || row.JobTitle || "",
+              dateJoined: row.DateJoining || row.DateJoined || "",
+              workEmail: row.OfficialEmail || row.WorkEmail || "",
             },
           }));
         } else {
@@ -186,14 +232,18 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             if (!emp.user.email)
               emp.user.email =
-                row.Email || row.PersonalEmail || row.WorkEmail || "";
+                row.Email ||
+                row.PersonalEmail ||
+                row.OfficialEmail ||
+                row.WorkEmail ||
+                "";
             emp.personal = {
               ...emp.personal,
               fullName: row.FullName || row.Name || "",
               gender: row.Gender || "",
               dob: processDate(row.DOB),
               age: row.Age || "",
-              mobile: row.Mobile || row.Phone || "",
+              mobile: row.PersonalMobile || row.Mobile || row.Phone || "",
               personalEmail: row.PersonalEmail || row.Email || "",
               bloodGroup: row.BloodGroup || "",
             };
@@ -201,18 +251,23 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
 
           professionalData.forEach((row, idx) => {
             const key =
-              row.EmpCode || row.Email || row.WorkEmail || `temp_${idx}`;
+              row.EmpCode ||
+              row.Email ||
+              row.OfficialEmail ||
+              row.WorkEmail ||
+              `temp_${idx}`;
             const emp = getOrCreateEmp(key);
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             if (!emp.user.email)
-              emp.user.email = row.WorkEmail || row.Email || "";
+              emp.user.email =
+                row.OfficialEmail || row.WorkEmail || row.Email || "";
             emp.professional = {
               ...emp.professional,
               department: row.Department || "",
-              jobTitle: row.JobTitle || "",
-              dateJoined: processDate(row.DateJoined),
+              jobTitle: row.Designation || row.JobTitle || "",
+              dateJoined: processDate(row.DateJoining || row.DateJoined),
               reportingManager: row.ReportingManager || "",
-              workEmail: row.WorkEmail || "",
+              workEmail: row.OfficialEmail || row.WorkEmail || "",
               attendanceBiometricId: row.BiometricId || "",
               linkedinUrl: row.LinkedIn || "",
               inProbation: row.Probation === "Yes",
@@ -266,10 +321,11 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               companyOpensBank: row.CompanyOpensBank === "Yes",
               panNumber: row.PANNumber || "",
               aadharNumber: row.AadharNumber || "",
-              bankName: row.BankName || "",
+              bankName: row.BankNameBranch || row.BankName || "",
               branch: row.Branch || "",
-              personalAccountNumber: row.PersonalAccountNumber || "",
-              personalIfsc: row.PersonalIFSC || "",
+              personalAccountNumber:
+                row.AccountNumber || row.PersonalAccountNumber || "",
+              personalIfsc: row.IFSCCode || row.PersonalIFSC || "",
               salaryAccountNumber: row.SalaryAccountNumber || "",
               salaryIfsc: row.SalaryIFSC || "",
             };
@@ -370,12 +426,12 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     try {
       setLoading(true);
       const response = await axios.post("/employees/bulk-upload", {
-        employees: validEmployees,
+        employees: validEmployees.map(toEmployeeModelPayload),
       });
 
       if (response.data.errorCount > 0) {
         alert(
-          `Upload finished, but ${response.data.errorCount} row(s) failed to save.\n\nThis usually happens when an employee is missing required Database fields (like Full Name, Gender, DOB, Mobile, or Blood Group). Check the Node console for exact details.`,
+          `Upload finished, but ${response.data.errorCount} row(s) failed to save.\n\nThis usually happens when an employee is missing required fields for the current Employee model (like Full Name, Gender, DOB, Mobile, Personal Email, PAN/Aadhaar, education, or employment data). Check the Node console for exact details.`,
         );
       } else {
         alert("Bulk upload completed successfully!");

@@ -18,10 +18,11 @@
 ## ✨ Features
 
 ### 👤 Employee Features
-- **Multi-step Registration** - 4-step wizard (Personal, Family, Address, Emergency)
+- **Multi-step Registration** - step wizard with Skip for now support that keeps filled fields and only leaves the current missing fields pending
 - **Profile Management** - Complete bank details and LinkedIn after HR approval
 - **Dashboard** - View all profile modules (Personal, Family, Professional, Payroll, Bank)
-- **Self-Service Editing** - Edit Personal, Family, Address, Emergency modules
+- **Self-Service Editing** - Edit Personal, Family, Address, Emergency modules inline from the employee detail tabs
+- **Profile Completion** - Shows missing sections and quick entry into the relevant tab
 - **Notifications** - Real-time in-app notifications
 
 ### 👔 HR Features
@@ -33,6 +34,8 @@
 - **Payroll Setup** - Manage CTC, salary structure, deductions
 - **Event Tracking** - Birthdays, anniversaries, probation endings
 - **Document Generation** - Generate offer letters with PDF templates
+  - Upload progress indicator while employee documents are sent
+  - Missing-field summary while preparing documents
   - Visual drag-and-drop editor
   - Variable substitution (${name}, ${role}, etc.)
   - Auto-pagination with smart content fitting
@@ -201,16 +204,20 @@ PUT    /complete-profile     - Add bank + LinkedIn
 PUT    /edit                 - Edit own modules
 ```
 
-### HR (`/api/hr`)
+### Admin / Employee Management (`/api/admin` and `/api/employees`)
 ```
-GET    /employee/:id              - Employee details
-PUT    /employee/:id/edit         - Edit any module
-GET    /all-employees             - All employees with completion progress
-POST   /bulk-upload               - Bulk import Excel
-GET    /pending-payrolls          - Employees without payroll
-POST   /payroll/:id               - Add payroll details
-GET    /upcoming-events           - Events dashboard
-POST   /trigger-reminders         - Manual reminder trigger
+GET    /admin/employees/:id       - Prefill data for the add/edit wizard
+PUT    /admin/employees/:id       - Save step-based employee changes
+GET    /employees/:id             - Employee detail page payload
+PUT    /employees/:id/edit        - Inline edit for a specific employee module
+GET    /employees/all             - All employees with completion progress
+POST   /employees/bulk-upload     - Bulk import Excel
+GET    /employees/pending-payrolls - Employees without payroll
+POST   /employees/payroll/:id     - Add payroll details
+GET    /employees/upcoming-events - Events dashboard
+POST   /employees/trigger-reminders - Manual reminder trigger
+POST   /employees/:id/sensitive-otp    - Request OTP for bank/payroll details
+POST   /employees/:id/sensitive-verify - Verify OTP and unlock sensitive details
 ```
 
 ### Documents (`/api/documents`)
@@ -220,6 +227,7 @@ GET    /offer-letter/:userId/inspect   - Inspect employee data
 POST   /offer-letter/:userId/prepare   - Prepare letter
 GET    /draft                          - Get draft
 POST   /compile                        - Generate PDF
+POST   /upload/:emp_code               - Upload employee documents
 ```
 
 ### Notifications (`/api/notifications`)
@@ -233,17 +241,13 @@ PUT    /:id/read        - Mark as read
 
 ## 📊 Database Models
 
-1. **UserModel** - email, password, role, emp_code, status, OTP
-2. **EmployeePersonalModel** - name, DOB, gender, blood group, mobile, Aadhar
-3. **EmployeeFamilyModel** - parents, marital status, spouse
-4. **EmployeeAddressModel** - current/permanent address
-5. **EmployeeEmergencyModel** - emergency contacts
-6. **EmployeeProfessionalModel** - department, job title, date joined, probation
-7. **EmployeeBankModel** - PAN, Aadhar, bank details
-8. **EmployeePayrollModel** - CTC, gross, components, deductions
-9. **NotificationModel** - in-app notifications
-10. **NotificationLogModel** - sent notification tracking
-11. **CounterModel** - employee code sequence
+1. **UserModel** - login/user shell with email, emp_code, status, pending sections
+2. **EmployeeModel** - single employee profile document, split internally into personal, contact, education, professional, bank and payroll schema components
+3. **EmployeeDraftModel** - add/edit employee draft data
+4. **EmployeeDocumentModel** - uploaded employee documents
+5. **NotificationModel** - in-app notifications
+6. **NotificationLogModel** - sent notification tracking
+7. **CounterModel** - employee code sequence
 
 ---
 
