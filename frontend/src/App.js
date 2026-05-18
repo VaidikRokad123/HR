@@ -1,132 +1,38 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import Navbar from './components/Navbar';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
-import WaitingPage from './pages/WaitingPage';
-import EmployeeDashboard from './pages/EmployeeDashboard';
-import CompleteProfile from './pages/CompleteProfile';
-import HRPendingApprovals from './pages/HRPendingApprovals';
-import HREmployeeDetail from './pages/HREmployeeDetail';
-import HRAllEmployees from './pages/HRAllEmployees';
-import HRUpcomingEvents from './pages/HRUpcomingEvents';
-import HRDocuments from './pages/HRDocuments';
-import OfferLetterAdvancedEditor from './pages/OfferLetterAdvancedEditor';
-import AddEmployee from './pages/AddEmployee';
-import PrivateRoute from './components/PrivateRoute';
-import './App.css';
-
-function AppShell() {
-  const { user } = useAuth();
-  return (
-    <div className={user ? 'App App--logged-in' : 'App'}>
-      {user ? <Navbar /> : null}
-      <main className={user ? 'app-main' : 'app-main app-main--full'}>
-        <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            
-            {/* Employee Routes */}
-            <Route 
-              path="/waiting" 
-              element={
-                <PrivateRoute role="employee">
-                  <WaitingPage />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/employee/dashboard" 
-              element={
-                <PrivateRoute role="employee">
-                  <EmployeeDashboard />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/employee/complete-profile" 
-              element={
-                <PrivateRoute role="employee">
-                  <CompleteProfile />
-                </PrivateRoute>
-              } 
-            />
-            
-            {/* HR Routes */}
-            <Route 
-              path="/hr/pending" 
-              element={
-                <PrivateRoute role="hr">
-                  <HRPendingApprovals />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/hr/employee/:id" 
-              element={
-                <PrivateRoute role="hr">
-                  <HREmployeeDetail />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/hr/all-employees" 
-              element={
-                <PrivateRoute role="hr">
-                  <HRAllEmployees />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/hr/upcoming-events" 
-              element={
-                <PrivateRoute role="hr">
-                  <HRUpcomingEvents />
-                </PrivateRoute>
-              } 
-            />
-            <Route
-              path="/hr/documents"
-              element={
-                <PrivateRoute role="hr">
-                  <HRDocuments />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/hr/documents/editor"
-              element={
-                <PrivateRoute role="hr">
-                  <OfferLetterAdvancedEditor />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/hr/add-employee"
-              element={
-                <PrivateRoute role="hr">
-                  <AddEmployee />
-                </PrivateRoute>
-              }
-            />
-            
-            <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </main>
-    </div>
-  );
-}
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import Navbar from "./components/Navbar";
+import EmployeeDetail from "./pages/EmployeeDetail";
+import AllEmployees from "./pages/AllEmployees";
+import UpcomingEvents from "./pages/UpcomingEvents";
+import Documents from "./pages/Documents";
+import OfferLetterAdvancedEditor from "./pages/OfferLetterAdvancedEditor";
+import AddEmployee from "./pages/AddEmployee";
+import "./App.css";
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppShell />
-      </Router>
-    </AuthProvider>
+    <Router>
+      <div className="App App--logged-in">
+        <Navbar />
+        <main className="app-main">
+          <Routes>
+            <Route path="/employees/:id" element={<EmployeeDetail />} />
+            <Route path="/employees" element={<AllEmployees />} />
+            <Route path="/events" element={<UpcomingEvents />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/editor" element={<OfferLetterAdvancedEditor />} />
+            <Route path="/add-employee" element={<AddEmployee />} />
+            <Route path="/" element={<Navigate to="/employees" replace />} />
+            <Route path="*" element={<Navigate to="/employees" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
   );
 }
 

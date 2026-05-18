@@ -158,3 +158,52 @@ export async function compileDocument(req, res) {
     res.status(500).json({ message: 'Failed to compile document', details: error.message });
   }
 }
+
+import EmployeeDocumentModel from '../models/EmployeeDocumentModel.js';
+
+export async function uploadEmployeeDocument(req, res) {
+  try {
+    const { emp_code } = req.params;
+    const { category } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    if (!category || !['personal_identity', 'onboarding', 'offboarding'].includes(category)) {
+      return res.status(400).json({ message: 'Invalid or missing category' });
+    }
+
+    const user = await UserModel.findOne({ emp_code });
+    if (!user) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    const document = new EmployeeDocumentModel({
+      userId: user._id,
+      emp_code,
+      category,
+      fileName: file.originalname,
+      filePath: file.path.replace(/\\/g, '/')
+    });
+
+    await document.save();
+
+    res.status(201).json({ message: 'Document uploaded successfully', document });
+  } catch (error) {
+    console.error('Upload document error:', error);
+    res.status(500).json({ message: 'Server error during document upload' });
+  }
+}
+
+export async function getEmployeeDocuments(req, res) {
+  try {
+    const { emp_code } = req.params;
+    const documents = await EmployeeDocumentModel.find({ emp_code }).sort({ createdAt: -1 });
+    res.json(documents);
+  } catch (error) {
+    console.error('Get employee documents error:', error);
+    res.status(500).json({ message: 'Server error fetching documents' });
+  }
+}

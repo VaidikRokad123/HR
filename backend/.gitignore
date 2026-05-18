@@ -5,7 +5,7 @@ node_modules/
 *.log
 
 
-company
+GeneratedDocuments
 generated
 company/
-generated/
+GeneratedDocuments/

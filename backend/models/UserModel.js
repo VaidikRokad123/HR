@@ -1,5 +1,4 @@
-import mongoose from 'mongoose';
-import { ROLES } from '../config/rbac.js';
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -7,38 +6,26 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true
-  },
-  passwordHash: {
-    type: String,
-    required: true
-  },
-  role: {
-    type: String,
-    enum: Object.values(ROLES),
-    default: ROLES.EMPLOYEE
+    trim: true,
   },
   emp_code: {
     type: String,
     unique: true,
-    sparse: true
-    // Don't set default - let it be undefined
+    sparse: true,
   },
   status: {
     type: String,
-    enum: ['pending_hr', 'approved', 'rejected'],
-    default: 'pending_hr'
+    enum: ["approved"],
+    default: "approved",
   },
-  resetPasswordOtp: {
-    type: String
-  },
-  resetPasswordExpires: {
-    type: Date
+  pendingSections: {
+    type: [String],
+    default: [],
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
-export default mongoose.model('User', userSchema);
+export default mongoose.model("User", userSchema);

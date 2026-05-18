@@ -29,6 +29,7 @@ const STEPS = [
   { label: "Education", icon: "🎓", key: "education", skippable: true },
   { label: "Employment", icon: "🏢", key: "employment", skippable: true },
   { label: "Payroll", icon: "💰", key: "payroll", skippable: true },
+  { label: "Documents", icon: "📄", key: "documents", skippable: true },
 ];
 
 const EMPTY_EMERGENCY = { name: "", phone: "", relationship: "" };
@@ -97,6 +98,31 @@ function getCities(stateName) {
       .map((c) => c.trim())
       .filter(Boolean);
   return [];
+}
+
+function pruneEmptyValues(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => pruneEmptyValues(item))
+      .filter((item) => item !== undefined);
+  }
+
+  if (value && typeof value === "object") {
+    const cleanedObject = Object.entries(value).reduce((acc, [key, entry]) => {
+      const cleaned = pruneEmptyValues(entry);
+      if (cleaned !== undefined) {
+        acc[key] = cleaned;
+      }
+      return acc;
+    }, {});
+    return Object.keys(cleanedObject).length > 0 ? cleanedObject : undefined;
+  }
+
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  return value;
 }
 
 const CUR_YEAR = new Date().getFullYear();
@@ -214,6 +240,11 @@ const AddEmployee = () => {
   const [form, setForm] = useState(INITIAL);
   const [emergency, setEmergency] = useState([{ ...EMPTY_EMERGENCY }]);
   const [refs, setRefs] = useState([{ ...EMPTY_REFERENCE }]);
+  const [docFiles, setDocFiles] = useState({
+    personal_identity: null,
+    onboarding: null,
+    offboarding: null
+  });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState("idle");
   const [draftId, setDraftId] = useState(null);
@@ -239,23 +270,50 @@ const AddEmployee = () => {
       axios
         .get(`/admin/employees/${editId}`)
         .then((r) => {
-          const e = r.data.employee;
+          const e = r.data.employee || r.data;
+          const personal = e.personal || {};
+          const address = e.address || {};
+          const emergencyContact = e.emergency?.emergencyContact1;
+          const professional = e.professional || {};
+          const bank = e.bank || {};
+          const payroll = e.payroll || {};
           setForm({
             ...INITIAL,
-            ...e,
-            currentAddress: e.currentAddress || INITIAL.currentAddress,
-            permanentAddress: e.permanentAddress || INITIAL.permanentAddress,
-            dob: e.dob ? e.dob.slice(0, 10) : "",
-            dateJoining: e.dateJoining ? e.dateJoining.slice(0, 10) : "",
-            confirmationDate:
-              e.confirmationDate && e.confirmationDate !== ""
-                ? e.confirmationDate.slice(0, 10)
-                : "",
-                 
+            emp_code: e.user?.emp_code || "",
+            fullName: personal.fullName || "",
+            dob: personal.dob ? personal.dob.slice(0, 10) : "",
+            gender: personal.gender || "",
+            personalMobile: personal.mobile || "",
+            personalEmail: personal.personalEmail || e.user?.email || "",
+            currentAddress: address.currentAddress || INITIAL.currentAddress,
+            permanentAddress: address.permanentAddress || INITIAL.permanentAddress,
+            dateJoining: professional.dateJoined ? professional.dateJoined.slice(0, 10) : "",
+            employmentType: professional.employmentType || "",
+            designation: professional.jobTitle || "",
+            department: professional.department || "",
+            reportingManager: professional.reportingManager || "",
+            officialEmail: professional.workEmail || "",
+            aadharNumber: bank.aadharNumber || "",
+            panNumber: bank.panNumber || "",
+            bankNameBranch: bank.bankName || "",
+            accountHolderName: bank.accountHolderName || "",
+            accountNumber: bank.personalAccountNumber || "",
+            ifscCode: bank.personalIfsc || "",
+            gross: payroll.gross || "",
+            ctc: payroll.ctc || "",
+            pfApplicable: payroll.pf || false,
+            esicApplicable: payroll.esic || false,
+            ptApplicable: payroll.pt || false,
           });
-          if (e.emergencyContacts?.length) setEmergency(e.emergencyContacts);
+          if (emergencyContact) {
+            setEmergency([{
+              name: emergencyContact.name || "",
+              phone: emergencyContact.mobile || "",
+              relationship: emergencyContact.relationship || "",
+            }]);
+          }
           if (e.references?.length) setRefs(e.references);
-          if (e.pendingSections?.length) setPending(e.pendingSections);
+          if (e.user?.pendingSections?.length) setPending(e.user.pendingSections);
         })
         .catch(() => {});
       return;
@@ -442,21 +500,118 @@ const AddEmployee = () => {
     window.scrollTo(0, 0);
   };
 
-  /* ── skip step ── */
-  const handleSkip = () => {
-    const sectionName = STEPS[step].key;
-    const nextPending = pending.includes(sectionName) ? pending : [...pending, sectionName];
-    setPending(nextPending);
-    setErrors({});
-    if (step < 5) setStep((s) => s + 1);
-    else submitForm(true, nextPending);
+  /* ── skip step ──
+     Only marks the section as "pending" if the step actually has
+     unfilled required fields. If everything is already filled, it
+     simply advances (same as clicking Next). */
+  const hasUnfilledRequiredFields = (forStep = step) => {
+    const e = {};
+    if (forStep === 0) {
+      if (!form.fullName) e.fullName = true;
+      if (!form.dob) e.dob = true;
+      if (!form.gender) e.gender = true;
+      if (!form.maritalStatus) e.maritalStatus = true;
+    }
+    if (forStep === 1) {
+      if (!form.personalMobile) e.personalMobile = true;
+      if (!form.personalEmail) e.personalEmail = true;
+      if (!form.currentAddress?.street) e.currentStreet = true;
+      if (!form.currentAddress?.state) e.currentState = true;
+      if (!form.currentAddress?.city) e.currentCity = true;
+      if (!form.sameAsCurrent) {
+        if (!form.permanentAddress?.street) e.permanentStreet = true;
+        if (!form.permanentAddress?.state) e.permanentState = true;
+        if (!form.permanentAddress?.city) e.permanentCity = true;
+      }
+      if (!emergency[0]?.name) e.emg0name = true;
+      if (!emergency[0]?.phone) e.emg0phone = true;
+      if (!emergency[0]?.relationship) e.emg0rel = true;
+    }
+    if (forStep === 2) {
+      if (!form.aadharNumber) e.aadharNumber = true;
+      if (!form.panNumber) e.panNumber = true;
+    }
+    if (forStep === 3) {
+      if (!form.highestQualification) e.highestQualification = true;
+      if (!form.graduationYear) e.graduationYear = true;
+      if (!form.instituteName) e.instituteName = true;
+      if (!refs[0]?.name) e.ref0name = true;
+      if (!refs[0]?.phone) e.ref0phone = true;
+    }
+    if (forStep === 4) {
+      if (!form.dateJoining) e.dateJoining = true;
+      if (!form.employmentType) e.employmentType = true;
+      if (!form.workLocation) e.workLocation = true;
+      if (!form.designation) e.designation = true;
+      if (!form.department) e.department = true;
+      if (!form.officialEmail) e.officialEmail = true;
+    }
+    if (forStep === 5) {
+      if (!form.gross) e.gross = true;
+      if (!form.ctc) e.ctc = true;
+      if (!form.accountHolderName) e.accountHolderName = true;
+      if (!form.bankNameBranch) e.bankNameBranch = true;
+      if (!form.accountNumber) e.accountNumber = true;
+      if (!form.ifscCode) e.ifscCode = true;
+    }
+    return Object.keys(e).length > 0;
   };
 
-  const submitForm = async (skipValidation = false, pendingOverrides = pending) => {
+  const getPendingSectionsFromForm = () =>
+    STEPS.reduce((sections, item, index) => {
+      return hasUnfilledRequiredFields(index) ? [...sections, item.key] : sections;
+    }, []);
+
+  const handleSkip = () => {
+    const sectionName = STEPS[step].key;
+    const hasEmpty = hasUnfilledRequiredFields(step);
+
+    // If there are unfilled required fields → mark section as pending
+    // Otherwise → just advance without marking pending
+    let nextPending = pending;
+    if (hasEmpty) {
+      nextPending = pending.includes(sectionName) ? pending : [...pending, sectionName];
+      setPending(nextPending);
+    } else {
+      // All required fields filled — remove from pending if it was there before
+      nextPending = pending.filter((s) => s !== sectionName);
+      setPending(nextPending);
+    }
+
+    setErrors({});
+    if (step < STEPS.length - 1) setStep((s) => s + 1);
+    else submitForm(true);
+  };
+
+  const handleDocFileChange = (category, e) => {
+    if (e.target.files && e.target.files[0]) {
+      setDocFiles(prev => ({ ...prev, [category]: e.target.files[0] }));
+    }
+  };
+
+  const uploadDocuments = async (empCode) => {
+    for (const [category, file] of Object.entries(docFiles)) {
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('category', category);
+        try {
+          await axios.post(`/documents/upload/${empCode}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        } catch (err) {
+          console.error('Failed to upload document:', category, err);
+        }
+      }
+    }
+  };
+
+  const submitForm = async (skipValidation = false) => {
     if (!skipValidation && !validate()) return;
     setSubmitting(true);
     setApiError("");
     try {
+      const currentPendingSections = getPendingSectionsFromForm();
       const OPTIONAL = [
         "religion",
         "physicallyHandicapped",
@@ -474,12 +629,12 @@ const AddEmployee = () => {
         "tdsRegime",
         "form12bb",
       ];
-      const payload = {
+      const payload = pruneEmptyValues({
         ...form,
         emergencyContacts: emergency,
         references: refs,
-        pendingSections: pendingOverrides,
-      };
+        pendingSections: currentPendingSections,
+      }) || {};
       OPTIONAL.forEach((k) => {
         if (!payload[k] || payload[k] === "") payload[k] = "not set yet";
       });
@@ -488,8 +643,9 @@ const AddEmployee = () => {
         delete payload.confirmationDate;
       }
 
-      if (editId) await axios.put(`/admin/employees/${editId}`, payload);
-      else await axios.post("/admin/employees", payload);
+      const response = editId
+        ? await axios.put(`/admin/employees/${editId}`, payload)
+        : await axios.post("/admin/employees", payload);
 
       if (draftId) {
         try {
@@ -497,7 +653,13 @@ const AddEmployee = () => {
         } catch {}
         localStorage.removeItem(DRAFT_KEY);
       }
-      navigate("/hr/all-employees");
+      
+      const finalEmpCode = response.data?.emp_code || payload.emp_code;
+      if (finalEmpCode) {
+        await uploadDocuments(finalEmpCode);
+      }
+      
+      navigate("/employees");
     } catch (err) {
       setApiError(err.response?.data?.message || "Failed to save employee");
     } finally {
@@ -1440,6 +1602,45 @@ const AddEmployee = () => {
         );
       }
 
+      /* ══ STEP 6: Documents ═════════════════════════════════════════ */
+      case 6: {
+        return (
+          <>
+            <div className="ae-section">
+              <div className="ae-section-title">
+                <span>📄</span> Upload Documents (Optional)
+              </div>
+              <div className="ae-grid-2">
+                <Field label="Personal Identity Document">
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={(e) => handleDocFileChange('personal_identity', e)}
+                  />
+                  {docFiles.personal_identity && <div style={{ fontSize: 12, marginTop: 4 }}>Selected: {docFiles.personal_identity.name}</div>}
+                </Field>
+                <Field label="Onboarding Document">
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={(e) => handleDocFileChange('onboarding', e)}
+                  />
+                  {docFiles.onboarding && <div style={{ fontSize: 12, marginTop: 4 }}>Selected: {docFiles.onboarding.name}</div>}
+                </Field>
+                <Field label="Offboarding Document">
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={(e) => handleDocFileChange('offboarding', e)}
+                  />
+                  {docFiles.offboarding && <div style={{ fontSize: 12, marginTop: 4 }}>Selected: {docFiles.offboarding.name}</div>}
+                </Field>
+              </div>
+            </div>
+          </>
+        );
+      }
+
       default:
         return null;
     }
@@ -1558,7 +1759,7 @@ const AddEmployee = () => {
         <div className="ae-nav-left">
           <button
             className="btn btn-secondary"
-            onClick={() => navigate("/hr/all-employees")}
+            onClick={() => navigate("/employees")}
           >
             <i className="ti ti-x" /> Cancel
           </button>

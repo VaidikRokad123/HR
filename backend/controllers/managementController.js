@@ -1,5 +1,5 @@
 import { validationResult } from 'express-validator';
-import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import UserModel from '../models/UserModel.js';
 import EmployeePersonalModel from '../models/EmployeePersonalModel.js';
 import EmployeeFamilyModel from '../models/EmployeeFamilyModel.js';
@@ -10,87 +10,194 @@ import EmployeeBankModel from '../models/EmployeeBankModel.js';
 import EmployeePayrollModel from '../models/EmployeePayrollModel.js';
 import NotificationModel from '../models/NotificationModel.js';
 import { generateEmpCode } from '../utils/empCodeUtils.js';
-import { hasPermission, PERMISSIONS, ROLES } from '../config/rbac.js';
 import { sendEmail } from '../utils/emailUtils.js';
 
-// @desc    Get all pending employee registrations
-// @route   GET /api/Human Resources/pending-employees
-// @access  Private (HR)
-export const getPendingEmployees = async (req, res) => {
-  try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
+const sensitiveOtpStore = new Map();
+const OTP_TTL_MS = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+
+const getAdminEmail = () =>
+  process.env.ADMIN_EMAIL ||
+  process.env.HR_EMAIL ||
+  process.env.EMAIL_CLIENT_MAIL ||
+  process.env.EMAIL_USER;
+
+const maskEmail = (email = '') => {
+  const [name, domain] = email.split('@');
+  if (!name || !domain) return email;
+  const visible = name.length <= 2 ? name[0] : name.slice(0, 2);
+  return `${visible}${'*'.repeat(Math.max(name.length - visible.length, 1))}@${domain}`;
+};
+
+const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex');
+
+const findBankAndPayroll = async (user) => {
+  const bankQuery = user.emp_code
+    ? { $or: [{ userId: user._id }, { emp_code: user.emp_code }] }
+    : { userId: user._id };
+  const payrollQuery = user.emp_code
+    ? { $or: [{ userId: user._id }, { emp_code: user.emp_code }] }
+    : { userId: user._id };
+
+  return Promise.all([
+    EmployeeBankModel.findOne(bankQuery),
+    EmployeePayrollModel.findOne(payrollQuery)
+  ]);
+};
+
+const buildSensitiveOtpEmail = ({ otp, employeeName, empCode }) => `
+  <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+    <div style="background: #111827; color: #fff; padding: 18px 22px;">
+      <h2 style="margin: 0;">Sensitive Details Access OTP</h2>
+    </div>
+    <div style="padding: 22px; color: #111827;">
+      <p>Use this OTP to view bank and payroll details for <strong>${employeeName || empCode || 'the employee'}</strong>.</p>
+      <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; margin: 18px 0;">${otp}</div>
+      <p style="color: #6b7280;">This OTP expires in 10 minutes. Do not share it outside authorized HR/admin access.</p>
+    </div>
+  </div>
+`;
+
+const isFilledValue = (value) => {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'boolean') return true;
+  return value !== undefined && value !== null && value !== '';
+};
+
+const getNestedValue = (source, path) => path.split('.').reduce((current, key) => current?.[key], source);
+
+const countFilledFields = (source, fields) =>
+  fields.reduce((count, path) => count + (isFilledValue(getNestedValue(source, path)) ? 1 : 0), 0);
+
+const buildCompletionSnapshot = (data) => {
+  const sections = [
+    {
+      key: 'personal',
+      label: 'Personal',
+      fields: ['personal.fullName', 'personal.gender', 'personal.dob', 'personal.mobile', 'personal.personalEmail', 'personal.bloodGroup']
+    },
+    {
+      key: 'family',
+      label: 'Family',
+      fields: ['family.fatherName', 'family.motherName', 'family.maritalStatus', 'family.spouseName', 'family.marriageDate']
+    },
+    {
+      key: 'address',
+      label: 'Address',
+      fields: [
+        'address.currentAddress.street',
+        'address.currentAddress.city',
+        'address.currentAddress.state',
+        'address.currentAddress.pincode',
+        'address.permanentAddress.street',
+        'address.permanentAddress.city',
+        'address.permanentAddress.state',
+        'address.permanentAddress.pincode'
+      ]
+    },
+    {
+      key: 'emergency',
+      label: 'Emergency',
+      fields: ['emergency.emergencyContact1.name', 'emergency.emergencyContact1.relationship', 'emergency.emergencyContact1.mobile']
+    },
+    {
+      key: 'professional',
+      label: 'Professional',
+      fields: ['professional.dateJoined', 'professional.department', 'professional.jobTitle', 'professional.employmentType', 'professional.reportingManager', 'professional.workEmail']
+    },
+    {
+      key: 'bank',
+      label: 'Bank',
+      fields: [
+        'bank.companyOpensBank',
+        'bank.panNumber',
+        'bank.aadharNumber',
+        'bank.permissionToUsePanAadhar',
+        'bank.bankName',
+        'bank.accountHolderName',
+        'bank.branch',
+        'bank.personalAccountNumber',
+        'bank.personalIfsc',
+        'bank.salaryAccountNumber',
+        'bank.salaryIfsc'
+      ]
+    },
+    {
+      key: 'payroll',
+      label: 'Payroll',
+      fields: ['payroll.ctc', 'payroll.gross', 'payroll.pf', 'payroll.pt', 'payroll.esic', 'payroll.tds']
     }
+  ];
 
-    const pendingUsers = await UserModel.find({ status: 'pending_hr' }).select('-passwordHash');
+  const sectionProgress = sections.map((section) => {
+    const filledFields = countFilledFields(data, section.fields);
+    const percentage = section.fields.length ? Math.round((filledFields / section.fields.length) * 100) : 0;
 
-    const pendingEmployees = await Promise.all(
-      pendingUsers.map(async (user) => {
-        const personal = await EmployeePersonalModel.findOne({ userId: user._id });
-        const family = await EmployeeFamilyModel.findOne({ userId: user._id });
-        const address = await EmployeeAddressModel.findOne({ userId: user._id });
-        const emergency = await EmployeeEmergencyModel.findOne({ userId: user._id });
+    return {
+      key: section.key,
+      label: section.label,
+      percentage,
+      filledFields,
+      totalFields: section.fields.length
+    };
+  });
 
-        return {
-          user: {
-            id: user._id,
-            email: user.email,
-            status: user.status,
-            createdAt: user.createdAt
-          },
-          personal,
-          family,
-          address,
-          emergency
-        };
-      })
-    );
+  const totalFields = sectionProgress.reduce((total, section) => total + section.totalFields, 0);
+  const filledFields = sectionProgress.reduce((total, section) => total + section.filledFields, 0);
+  const completionPercentage = totalFields ? Math.round((filledFields / totalFields) * 100) : 0;
+  const missingSections = sectionProgress.filter((section) => section.percentage < 100).map((section) => section.label);
 
-    res.json(pendingEmployees);
+  return {
+    completionPercentage,
+    filledFields,
+    totalFields,
+    missingSections,
+    sectionProgress
+  };
+};
 
-  } catch (error) {
-    console.error('Get pending employees error:', error);
-    res.status(500).json({ message: 'Server error' });
+const normalizeEmployeeStatus = async (user) => {
+  if (!user || user.status === 'approved') {
+    return 'approved';
   }
+
+  user.status = 'approved';
+  await user.save();
+  return 'approved';
 };
 
 // @desc    Get full employee details
-// @route   GET /api/Human Resources/employee/:id
-// @access  Private (HR)
+// @route   GET /api/employees/:id
+// @access  Private (Admin)
 export const getEmployeeById = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-
     const user = await UserModel.findById(req.params.id).select('-passwordHash');
 
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    const personal = await EmployeePersonalModel.findOne({ userId: user._id });
-    const family = await EmployeeFamilyModel.findOne({ userId: user._id });
-    const address = await EmployeeAddressModel.findOne({ userId: user._id });
-    const emergency = await EmployeeEmergencyModel.findOne({ userId: user._id });
+    const [personal, family, address, emergency, professional] = await Promise.all([
+      EmployeePersonalModel.findOne({ userId: user._id }),
+      EmployeeFamilyModel.findOne({ userId: user._id }),
+      EmployeeAddressModel.findOne({ userId: user._id }),
+      EmployeeEmergencyModel.findOne({ userId: user._id }),
+      user.emp_code
+        ? EmployeeProfessionalModel.findOne({ $or: [{ userId: user._id }, { emp_code: user.emp_code }] })
+        : EmployeeProfessionalModel.findOne({ userId: user._id }),
+    ]);
 
-    let professional = null;
-    let bank = null;
-    let payroll = null;
-
-    if (user.emp_code) {
-      professional = await EmployeeProfessionalModel.findOne({ emp_code: user.emp_code });
-      bank = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
-      payroll = await EmployeePayrollModel.findOne({ emp_code: user.emp_code });
-    }
+    const [bank, payroll] = await findBankAndPayroll(user);
+    const completion = buildCompletionSnapshot({ user, personal, family, address, emergency, professional, bank, payroll });
+    const status = await normalizeEmployeeStatus(user);
 
     res.json({
       user: {
         id: user._id,
         email: user.email,
-        role: user.role,
         emp_code: user.emp_code,
-        status: user.status,
+        status,
+        pendingSections: user.pendingSections || [],
         createdAt: user.createdAt
       },
       personal,
@@ -98,8 +205,16 @@ export const getEmployeeById = async (req, res) => {
       address,
       emergency,
       professional,
-      bank,
-      payroll
+      bank: null,
+      payroll: null,
+      sensitiveDetailsLocked: true,
+      hasBankDetails: Boolean(bank),
+      hasPayrollDetails: Boolean(payroll),
+      completionPercentage: completion.completionPercentage,
+      filledFields: completion.filledFields,
+      totalFields: completion.totalFields,
+      missingSections: completion.missingSections,
+      sectionProgress: completion.sectionProgress
     });
 
   } catch (error) {
@@ -108,156 +223,110 @@ export const getEmployeeById = async (req, res) => {
   }
 };
 
-// @desc    Approve employee and assign professional details
-// @route   PUT /api/Human Resources/employee/:id/approve
-// @access  Private (HR)
-export const approveEmployee = async (req, res) => {
+// @desc    Send OTP to admin email for sensitive bank/payroll access
+// @route   POST /api/employees/:id/sensitive-otp
+// @access  Private (Admin)
+export const requestSensitiveDetailsOtp = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-    if (!hasPermission(req.user, PERMISSIONS.HR_WRITE)) {
-      return res.status(403).json({ message: 'Access denied. This action requires Senior HR privileges.' });
+    const adminEmail = getAdminEmail();
+    if (!adminEmail) {
+      return res.status(500).json({ message: 'Admin email is not configured. Set ADMIN_EMAIL or HR_EMAIL.' });
     }
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const user = await UserModel.findById(req.params.id);
-
+    const user = await UserModel.findById(req.params.id).select('-passwordHash');
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    if (user.status !== 'pending_hr') {
-      return res.status(400).json({ message: 'Employee is not in pending status' });
-    }
-
-    // Generate unique emp_code
-    const emp_code = await generateEmpCode();
-
-    // Update user
-    user.emp_code = emp_code;
-    user.status = 'approved';
-    if (req.body.workEmail) {
-      user.email = req.body.workEmail.toLowerCase().trim();
-    }
-    await user.save();
-
-    // Update all employee records with emp_code
-    await EmployeePersonalModel.updateOne({ userId: user._id }, { emp_code });
-    await EmployeeFamilyModel.updateOne({ userId: user._id }, { emp_code });
-    await EmployeeAddressModel.updateOne({ userId: user._id }, { emp_code });
-    await EmployeeEmergencyModel.updateOne({ userId: user._id }, { emp_code });
-
-    // Create professional record
-    const {
-      dateJoined,
-      department,
-      jobTitle,
-      employmentType,
-      reportingManager,
-      workEmail,
-      attendanceBiometricId,
-      inProbation,
-      probationDuration
-    } = req.body;
-
-    const professional = new EmployeeProfessionalModel({
-      userId: user._id,
-      emp_code,
-      dateJoined,
-      department,
-      jobTitle,
-      employmentType,
-      reportingManager,
-      workEmail,
-      attendanceBiometricId,
-      inProbation: inProbation !== undefined ? inProbation : true,
-      probationDuration,
-      probationEndedNotified: false
+    const personal = await EmployeePersonalModel.findOne({ userId: user._id });
+    const otp = String(crypto.randomInt(100000, 1000000));
+    sensitiveOtpStore.set(String(user._id), {
+      hash: hashOtp(otp),
+      expiresAt: Date.now() + OTP_TTL_MS,
+      attempts: 0
     });
 
-    await professional.save();
-
-    // Create notification for employee
-    const notification = new NotificationModel({
-      toRole: 'employee',
-      toUserId: user._id,
-      toEmpCode: emp_code,
-      message: `Your profile has been approved! Your employee code is ${emp_code}. Your company email for login is ${user.email}. Please complete your bank details and LinkedIn URL.`
-    });
-    await notification.save();
+    await sendEmail(
+      adminEmail,
+      `HRMS OTP for sensitive employee details`,
+      buildSensitiveOtpEmail({
+        otp,
+        employeeName: personal?.fullName,
+        empCode: user.emp_code
+      })
+    );
 
     res.json({
-      message: 'Employee approved successfully',
-      emp_code,
-      professional
+      message: `OTP sent to ${maskEmail(adminEmail)}`,
+      email: maskEmail(adminEmail)
     });
-
   } catch (error) {
-    console.error('Approve employee error:', error);
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({ message: `Validation failed: ${messages.join(', ')}` });
-    }
-    res.status(500).json({ message: 'Server error' });
+    console.error('Request sensitive OTP error:', error);
+    res.status(500).json({ message: error.message || 'Failed to send OTP' });
   }
 };
 
-// @desc    Reject employee registration
-// @route   PUT /api/Human Resources/employee/:id/reject
-// @access  Private (HR)
-export const rejectEmployee = async (req, res) => {
+// @desc    Verify OTP and return sensitive bank/payroll details
+// @route   POST /api/employees/:id/sensitive-verify
+// @access  Private (Admin)
+export const verifySensitiveDetailsOtp = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-    if (!hasPermission(req.user, PERMISSIONS.HR_WRITE)) {
-      return res.status(403).json({ message: 'Access denied. This action requires Senior HR privileges.' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'OTP must be a 6-digit number' });
     }
 
-    const user = await UserModel.findById(req.params.id);
+    const { otp } = req.body;
+    if (!otp) {
+      return res.status(400).json({ message: 'OTP is required' });
+    }
 
+    const user = await UserModel.findById(req.params.id).select('-passwordHash');
     if (!user) {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    if (user.status !== 'pending_hr') {
-      return res.status(400).json({ message: 'Employee is not in pending status' });
+    const key = String(user._id);
+    const record = sensitiveOtpStore.get(key);
+    if (!record) {
+      return res.status(400).json({ message: 'Please request a new OTP' });
     }
 
-    // Delete all related records
-    await EmployeePersonalModel.deleteOne({ userId: user._id });
-    await EmployeeFamilyModel.deleteOne({ userId: user._id });
-    await EmployeeAddressModel.deleteOne({ userId: user._id });
-    await EmployeeEmergencyModel.deleteOne({ userId: user._id });
+    if (record.expiresAt < Date.now()) {
+      sensitiveOtpStore.delete(key);
+      return res.status(400).json({ message: 'OTP expired. Please request a new OTP' });
+    }
 
-    // Delete user
-    await UserModel.deleteOne({ _id: user._id });
+    if (record.attempts >= MAX_OTP_ATTEMPTS) {
+      sensitiveOtpStore.delete(key);
+      return res.status(400).json({ message: 'Too many invalid attempts. Please request a new OTP' });
+    }
 
-    res.json({ message: 'Employee registration rejected and deleted' });
+    if (record.hash !== hashOtp(otp)) {
+      record.attempts += 1;
+      sensitiveOtpStore.set(key, record);
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
 
+    sensitiveOtpStore.delete(key);
+    const [bank, payroll] = await findBankAndPayroll(user);
+
+    res.json({
+      message: 'Sensitive details unlocked',
+      bank,
+      payroll
+    });
   } catch (error) {
-    console.error('Reject employee error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Verify sensitive OTP error:', error);
+    res.status(500).json({ message: 'Failed to verify OTP' });
   }
 };
 
 // @desc    Edit employee details (any module)
-// @route   PUT /api/Human Resources/employee/:id/edit
-// @access  Private (HR)
+// @route   PUT /api/employees/:id/edit
+// @access  Private (Admin)
 export const editEmployee = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-    if (!hasPermission(req.user, PERMISSIONS.HR_WRITE)) {
-      return res.status(403).json({ message: 'Access denied. This action requires Senior HR privileges.' });
-    }
-
     const { module, data } = req.body;
 
     if (!module || !data) {
@@ -306,11 +375,8 @@ export const editEmployee = async (req, res) => {
         break;
 
       case 'professional':
-        if (!user.emp_code) {
-          return res.status(400).json({ message: 'Employee not approved yet' });
-        }
 
-        // Validate probation duration if present
+
         if (data.probationDuration) {
           const duration = parseInt(data.probationDuration, 10);
           if (isNaN(duration) || duration < 0 || duration > 12) {
@@ -318,7 +384,6 @@ export const editEmployee = async (req, res) => {
           }
         }
 
-        // Reset notification flag if HR updates probation duration
         if (data.inProbation && data.probationDuration) {
           data.probationEndedNotified = false;
         }
@@ -331,10 +396,54 @@ export const editEmployee = async (req, res) => {
         break;
 
       case 'bank':
-        if (!user.emp_code) {
-          return res.status(400).json({ message: 'Employee not approved yet' });
-        }
+
         updated = await EmployeeBankModel.findOneAndUpdate(
+          { emp_code: user.emp_code },
+          data,
+          { new: true, runValidators: true, upsert: true }
+        );
+        break;
+
+      case 'payroll':
+
+        
+        const currentPayroll = await EmployeePayrollModel.findOne({ emp_code: user.emp_code });
+        if (currentPayroll) {
+          const hasChanges = ['ctc', 'gross', 'pf', 'pt', 'esic', 'tds'].some(key => {
+            if (data[key] === undefined) return false;
+            return String(data[key]) !== String(currentPayroll[key]);
+          });
+          
+          if (hasChanges) {
+            data.$push = {
+              history: {
+                ctc: data.ctc !== undefined ? data.ctc : currentPayroll.ctc,
+                gross: data.gross !== undefined ? data.gross : currentPayroll.gross,
+                pf: data.pf !== undefined ? data.pf : currentPayroll.pf,
+                pt: data.pt !== undefined ? data.pt : currentPayroll.pt,
+                esic: data.esic !== undefined ? data.esic : currentPayroll.esic,
+                tds: data.tds !== undefined ? data.tds : currentPayroll.tds,
+                updatedAt: new Date(),
+                changeType: 'updated by admin'
+              }
+            };
+          }
+        } else {
+          data.$push = {
+            history: {
+              ctc: data.ctc,
+              gross: data.gross,
+              pf: data.pf,
+              pt: data.pt,
+              esic: data.esic,
+              tds: data.tds,
+              updatedAt: new Date(),
+              changeType: 'initial setup'
+            }
+          };
+        }
+
+        updated = await EmployeePayrollModel.findOneAndUpdate(
           { emp_code: user.emp_code },
           data,
           { new: true, runValidators: true, upsert: true }
@@ -361,18 +470,15 @@ export const editEmployee = async (req, res) => {
 };
 
 // @desc    Get all approved employees
-// @route   GET /api/Human Resources/all-employees
-// @access  Private (HR)
+// @route   GET /api/employees/all
+// @access  Private (Admin)
 export const getAllEmployees = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-
-    const approvedUsers = await UserModel.find({ status: 'approved' }).select('-passwordHash');
+    const users = await UserModel.find({ status: { $ne: 'rejected' } }).select('-passwordHash');
 
     const employees = await Promise.all(
-      approvedUsers.map(async (user) => {
+      users.map(async (user) => {
+        const status = await normalizeEmployeeStatus(user);
         const personal = await EmployeePersonalModel.findOne({ emp_code: user.emp_code });
         const professional = await EmployeeProfessionalModel.findOne({ emp_code: user.emp_code });
         const family = await EmployeeFamilyModel.findOne({ emp_code: user.emp_code });
@@ -380,8 +486,8 @@ export const getAllEmployees = async (req, res) => {
         const emergency = await EmployeeEmergencyModel.findOne({ emp_code: user.emp_code });
         const bank = await EmployeeBankModel.findOne({ emp_code: user.emp_code });
         const payroll = await EmployeePayrollModel.findOne({ emp_code: user.emp_code });
+        const completion = buildCompletionSnapshot({ user, personal, family, address, emergency, professional, bank, payroll });
 
-        // Check if probation has ended and notify HR
         if (professional && professional.inProbation && professional.probationDuration && professional.dateJoined) {
           const months = parseInt(professional.probationDuration, 10);
 
@@ -391,7 +497,7 @@ export const getAllEmployees = async (req, res) => {
 
             if (new Date() >= probationEndDate) {
               const notification = new NotificationModel({
-                toRole: ROLES.HR,
+                toRole: 'admin',
                 message: `Probation period has ended for ${personal?.fullName || user.email} (${user.emp_code}). Please review their status.`
               });
               await notification.save();
@@ -407,7 +513,7 @@ export const getAllEmployees = async (req, res) => {
             id: user._id,
             email: user.email,
             emp_code: user.emp_code,
-            status: user.status,
+            status,
             createdAt: user.createdAt
           },
           personal,
@@ -415,8 +521,16 @@ export const getAllEmployees = async (req, res) => {
           family,
           address,
           emergency,
-          bank,
-          payroll
+          bank: null,
+          payroll: null,
+          sensitiveDetailsLocked: true,
+          hasBankDetails: Boolean(bank),
+          hasPayrollDetails: Boolean(payroll),
+          completionPercentage: completion.completionPercentage,
+          filledFields: completion.filledFields,
+          totalFields: completion.totalFields,
+          missingSections: completion.missingSections,
+          sectionProgress: completion.sectionProgress
         };
       })
     );
@@ -430,16 +544,10 @@ export const getAllEmployees = async (req, res) => {
 };
 
 // @desc    Get employees pending payroll details
-// @route   GET /api/Human Resources/pending-payrolls
-// @access  Private (HR)
+// @route   GET /api/employees/pending-payrolls
+// @access  Private (Admin)
 export const getPendingPayrolls = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-
-    // Every approved employee with professional details but no payroll record
-    // belongs in Pending Payrolls until HR saves payroll details.
     const professionals = await EmployeeProfessionalModel.find({
       emp_code: { $exists: true, $ne: null },
       exitDate: { $eq: null }
@@ -488,17 +596,10 @@ export const getPendingPayrolls = async (req, res) => {
 };
 
 // @desc    Add payroll details for an employee
-// @route   POST /api/Human Resources/payroll/:id
-// @access  Private (HR)
+// @route   POST /api/employees/payroll/:id
+// @access  Private (Admin)
 export const addPayrollDetails = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-    if (!hasPermission(req.user, PERMISSIONS.HR_WRITE)) {
-      return res.status(403).json({ message: 'Access denied. This action requires Senior HR privileges.' });
-    }
-
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -530,7 +631,17 @@ export const addPayrollDetails = async (req, res) => {
       pf: pf || false,
       pt: pt || false,
       esic: esic || false,
-      tds: tds || false
+      tds: tds || false,
+      history: [{
+        ctc,
+        gross,
+        pf: pf || false,
+        pt: pt || false,
+        esic: esic || false,
+        tds: tds || false,
+        changeType: 'initial setup',
+        updatedAt: new Date()
+      }]
     });
 
     await newPayroll.save();
@@ -548,17 +659,10 @@ export const addPayrollDetails = async (req, res) => {
 };
 
 // @desc    Bulk upload employees from excel data
-// @route   POST /api/Human Resources/bulk-upload
-// @access  Private (HR)
+// @route   POST /api/employees/bulk-upload
+// @access  Private (Admin)
 export const bulkUploadEmployees = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-    if (!hasPermission(req.user, PERMISSIONS.HR_WRITE)) {
-      return res.status(403).json({ message: 'Access denied. This action requires Senior HR privileges.' });
-    }
-
     const { employees } = req.body;
     if (!employees || !Array.isArray(employees)) {
       return res.status(400).json({ message: 'Invalid data format. Expected an array of employees.' });
@@ -566,10 +670,6 @@ export const bulkUploadEmployees = async (req, res) => {
 
     const createdUsers = [];
     const errors = [];
-
-    // Default password for bulk uploaded users
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash('Welcome@123', salt);
 
     for (const [index, empData] of employees.entries()) {
       try {
@@ -579,7 +679,6 @@ export const bulkUploadEmployees = async (req, res) => {
         email = email.toLowerCase().trim();
         const empCodeFromSheet = empData.emp_code;
 
-        // Check if user exists by email or emp_code
         let user = await UserModel.findOne({ email });
         if (!user && empCodeFromSheet) {
           user = await UserModel.findOne({ emp_code: empCodeFromSheet });
@@ -588,7 +687,6 @@ export const bulkUploadEmployees = async (req, res) => {
         let isUpdate = false;
         if (user) {
           isUpdate = true;
-          // Ensure existing user is approved and has an employee code
           let userNeedsUpdate = false;
           if (user.status !== 'approved') {
             user.status = 'approved';
@@ -604,8 +702,6 @@ export const bulkUploadEmployees = async (req, res) => {
 
           user = new UserModel({
             email,
-            passwordHash,
-            role: ROLES.EMPLOYEE,
             status: 'approved',
             emp_code
           });
@@ -701,125 +797,106 @@ const isCompleteEmployeeProfile = (bank, professional) => {
   return Boolean(bank.bankName && bank.personalAccountNumber && bank.personalIfsc);
 };
 
-// @desc    Get upcoming events
-// @route   GET /api/Human Resources/upcoming-events
-// @access  Private (HR)
 export const collectUpcomingEvents = async () => {
-    const today = startOfDay(new Date());
+  const today = startOfDay(new Date());
 
-    const events = {
-      birthdays: [],
-      anniversaries: [],
-      probation: [],
-      incompleteProfiles: [],
-      payrollPending: []
+  const events = {
+    birthdays: [],
+    anniversaries: [],
+    probation: [],
+    incompleteProfiles: [],
+    payrollPending: []
+  };
+
+  const approvedUsers = await UserModel.find({
+    status: 'approved',
+    emp_code: { $exists: true, $ne: null }
+  }).select('email emp_code createdAt');
+
+  for (const user of approvedUsers) {
+    const [personal, professional, bank, payroll] = await Promise.all([
+      EmployeePersonalModel.findOne({ emp_code: user.emp_code }),
+      EmployeeProfessionalModel.findOne({ emp_code: user.emp_code }),
+      EmployeeBankModel.findOne({ emp_code: user.emp_code }),
+      EmployeePayrollModel.findOne({ emp_code: user.emp_code })
+    ]);
+
+    const base = {
+      userId: user._id,
+      email: user.email,
+      emp_code: user.emp_code,
+      fullName: personal?.fullName,
+      department: professional?.department,
+      jobTitle: professional?.jobTitle
     };
 
-    const approvedUsers = await UserModel.find({
-      status: 'approved',
-      emp_code: { $exists: true, $ne: null }
-    }).select('email emp_code createdAt');
+    if (personal?.dob) {
+      const nextBirthday = nextAnnualDate(personal.dob, today);
+      const daysLeft = daysBetween(today, nextBirthday);
 
-    for (const user of approvedUsers) {
-      const [personal, professional, bank, payroll] = await Promise.all([
-        EmployeePersonalModel.findOne({ emp_code: user.emp_code }),
-        EmployeeProfessionalModel.findOne({ emp_code: user.emp_code }),
-        EmployeeBankModel.findOne({ emp_code: user.emp_code }),
-        EmployeePayrollModel.findOne({ emp_code: user.emp_code })
-      ]);
-
-      const base = {
-        userId: user._id,
-        email: user.email,
-        emp_code: user.emp_code,
-        fullName: personal?.fullName,
-        department: professional?.department,
-        jobTitle: professional?.jobTitle
-      };
-
-      if (personal?.dob) {
-        const nextBirthday = nextAnnualDate(personal.dob, today);
-        const daysLeft = daysBetween(today, nextBirthday);
-
-        if (daysLeft >= 0 && daysLeft <= 7) {
-          events.birthdays.push({
-            ...base,
-            dob: nextBirthday,
-            daysLeft
-          });
-        }
-      }
-
-      if (professional?.dateJoined && !professional.exitDate) {
-        const nextAnniversary = nextAnnualDate(professional.dateJoined, today);
-        const yearsCompleted = nextAnniversary.getFullYear() - new Date(professional.dateJoined).getFullYear();
-        const daysLeft = daysBetween(today, nextAnniversary);
-
-        if (yearsCompleted > 0 && daysLeft >= 0 && daysLeft <= 7) {
-          events.anniversaries.push({
-            ...base,
-            dateJoined: nextAnniversary,
-            originalDateJoined: professional.dateJoined,
-            yearsCompleted,
-            daysLeft
-          });
-        }
-      }
-
-      if (
-        professional?.inProbation &&
-        professional?.dateJoined &&
-        professional?.probationDuration !== undefined &&
-        professional?.probationDuration !== null
-      ) {
-        const probationEndDate = new Date(professional.dateJoined);
-        probationEndDate.setMonth(probationEndDate.getMonth() + Number(professional.probationDuration || 0));
-        const daysLeft = daysBetween(today, probationEndDate);
-
-        if (daysLeft >= 0 && daysLeft <= 7) {
-          events.probation.push({
-            ...base,
-            probationEndDate,
-            daysLeft
-          });
-        }
-      }
-
-      if (professional && !isCompleteEmployeeProfile(bank, professional)) {
-        const approvedAt = professional.createdAt || user.createdAt;
-        const daysSinceApproval = daysBetween(approvedAt, today);
-
-        if (daysSinceApproval >= 3) {
-          events.incompleteProfiles.push({
-            ...base,
-            approvedAt,
-            daysSinceApproval
-          });
-        }
-      }
-
-      if (professional?.dateJoined && !professional.exitDate && !payroll) {
-        const daysSinceJoining = daysBetween(professional.dateJoined, today);
-
-        if (daysSinceJoining >= 7) {
-          events.payrollPending.push({
-            ...base,
-            dateJoined: professional.dateJoined,
-            daysSinceJoining
-          });
-        }
+      if (daysLeft >= 0 && daysLeft <= 7) {
+        events.birthdays.push({ ...base, dob: nextBirthday, daysLeft });
       }
     }
 
-    Object.values(events).forEach((items) => {
-      items.sort((a, b) => {
-        const aDays = a.daysLeft ?? a.daysSinceApproval ?? a.daysSinceJoining ?? 0;
-        const bDays = b.daysLeft ?? b.daysSinceApproval ?? b.daysSinceJoining ?? 0;
-        return aDays - bDays;
-      });
-    });
+    if (professional?.dateJoined && !professional.exitDate) {
+      const nextAnniversary = nextAnnualDate(professional.dateJoined, today);
+      const yearsCompleted = nextAnniversary.getFullYear() - new Date(professional.dateJoined).getFullYear();
+      const daysLeft = daysBetween(today, nextAnniversary);
 
-    return events;
+      if (yearsCompleted > 0 && daysLeft >= 0 && daysLeft <= 7) {
+        events.anniversaries.push({
+          ...base,
+          dateJoined: nextAnniversary,
+          originalDateJoined: professional.dateJoined,
+          yearsCompleted,
+          daysLeft
+        });
+      }
+    }
+
+    if (
+      professional?.inProbation &&
+      professional?.dateJoined &&
+      professional?.probationDuration !== undefined &&
+      professional?.probationDuration !== null
+    ) {
+      const probationEndDate = new Date(professional.dateJoined);
+      probationEndDate.setMonth(probationEndDate.getMonth() + Number(professional.probationDuration || 0));
+      const daysLeft = daysBetween(today, probationEndDate);
+
+      if (daysLeft >= 0 && daysLeft <= 7) {
+        events.probation.push({ ...base, probationEndDate, daysLeft });
+      }
+    }
+
+    if (professional && !isCompleteEmployeeProfile(bank, professional)) {
+      const approvedAt = professional.createdAt || user.createdAt;
+      const daysSinceApproval = daysBetween(approvedAt, today);
+
+      if (daysSinceApproval >= 3) {
+        events.incompleteProfiles.push({ ...base, approvedAt, daysSinceApproval });
+      }
+    }
+
+    if (professional?.dateJoined && !professional.exitDate && !payroll) {
+      const daysSinceJoining = daysBetween(professional.dateJoined, today);
+
+      if (daysSinceJoining >= 7) {
+        events.payrollPending.push({ ...base, dateJoined: professional.dateJoined, daysSinceJoining });
+      }
+    }
+  }
+
+  Object.values(events).forEach((items) => {
+    items.sort((a, b) => {
+      const aDays = a.daysLeft ?? a.daysSinceApproval ?? a.daysSinceJoining ?? 0;
+      const bDays = b.daysLeft ?? b.daysSinceApproval ?? b.daysSinceJoining ?? 0;
+      return aDays - bDays;
+    });
+  });
+
+  return events;
 };
 
 const formatEventDate = (date) => date ? new Date(date).toLocaleDateString('en-IN') : 'N/A';
@@ -863,7 +940,7 @@ const buildUpcomingEventsEmail = (events) => {
       <div style="font-family: Arial, sans-serif; max-width: 760px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
         <div style="background: #f7941d; color: #fff; padding: 18px 22px;">
           <h2 style="margin: 0;">Upcoming Events Summary</h2>
-          <p style="margin: 6px 0 0;">Generated from HRMS for the next 7 days and pending HR actions.</p>
+          <p style="margin: 6px 0 0;">Generated from HRMS for the next 7 days and pending actions.</p>
         </div>
         <div style="padding: 22px;">
           <p><strong>Total alert(s):</strong> ${total}</p>
@@ -878,7 +955,7 @@ const buildUpcomingEventsEmail = (events) => {
   };
 };
 
-export const sendUpcomingEventsEmailToHr = async () => {
+export const sendUpcomingEventsEmail = async () => {
   if (!process.env.HR_EMAIL) {
     throw new Error('HR_EMAIL is not configured in environment variables.');
   }
@@ -891,10 +968,6 @@ export const sendUpcomingEventsEmailToHr = async () => {
 
 export const getUpcomingEvents = async (req, res) => {
   try {
-    if (!hasPermission(req.user, PERMISSIONS.HR_READ)) {
-      return res.status(403).json({ message: 'Access denied. HR only.' });
-    }
-
     const events = await collectUpcomingEvents();
     res.json(events);
   } catch (error) {

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { sanitizeHtml } from '../utils/safeHtml';
 import './OfferLetterAdvancedEditor.css';
 
-const PAGE_PACKING_LIMIT_MM = 237;
+const PAGE_PACKING_LIMIT_MM = 218;
 const PX_PER_MM = 96 / 25.4;
 
 function OfferLetterAdvancedEditor() {
@@ -46,7 +46,7 @@ function OfferLetterAdvancedEditor() {
     pageEl.style.fontSize = '11pt';
     pageEl.style.lineHeight = '1.5';
     const contentEl = document.createElement('div');
-    contentEl.style.padding = '30mm 25mm 28mm';
+    contentEl.style.padding = '45mm 25mm 34mm';
     pageEl.appendChild(contentEl);
     root.appendChild(pageEl);
 
@@ -255,7 +255,7 @@ function OfferLetterAdvancedEditor() {
         <div className="editor-empty">
           <h2>Document draft unavailable</h2>
           <p>{error}</p>
-          <button type="button" className="btn btn-primary" onClick={() => navigate('/hr/documents')}>Back to Documents</button>
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/documents')}>Back to Documents</button>
         </div>
       </div>
     );
@@ -268,7 +268,7 @@ function OfferLetterAdvancedEditor() {
     <div className="document-editor">
       {notice && <div className="document-editor-notice">{notice}</div>}
       <header className="document-editor-header">
-        <button type="button" className="btn btn-secondary" onClick={() => navigate('/hr/documents')}>Back</button>
+        <button type="button" className="btn btn-secondary" onClick={() => navigate('/documents')}>Back</button>
         <div>
           <h1>Advanced Document Editor</h1>
           <p>{metadata.name || 'Prepared document'}</p>

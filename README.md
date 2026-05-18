@@ -203,12 +203,9 @@ PUT    /edit                 - Edit own modules
 
 ### HR (`/api/hr`)
 ```
-GET    /pending-employees         - Pending approvals
 GET    /employee/:id              - Employee details
-PUT    /employee/:id/approve      - Approve employee
-PUT    /employee/:id/reject       - Reject employee
 PUT    /employee/:id/edit         - Edit any module
-GET    /all-employees             - All approved employees
+GET    /all-employees             - All employees with completion progress
 POST   /bulk-upload               - Bulk import Excel
 GET    /pending-payrolls          - Employees without payroll
 POST   /payroll/:id               - Add payroll details

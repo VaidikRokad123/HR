@@ -96,59 +96,6 @@ const createTransporter = async () => {
   );
 };
 
-export const sendPasswordResetEmail = async (toEmail, userName, otp) => {
-  try {
-    console.log(`[Email] Sending password reset OTP to ${toEmail}`);
-
-    const transporter = await createTransporter();
-
-    const mailOptions = {
-      from: `"HR Portal Support" <${getSenderEmail()}>`,
-      to: toEmail,
-      subject: 'Password Reset Request - HR Portal',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-          <div style="background-color: #f7941d; padding: 20px; text-align: center;">
-            <h2 style="color: white; margin: 0; font-size: 24px;">HR Management Portal</h2>
-          </div>
-          <div style="padding: 30px; background-color: #ffffff;">
-            <p style="font-size: 16px; color: #333;">Hello <strong>${userName || 'there'}</strong>,</p>
-            <p style="font-size: 16px; color: #555; line-height: 1.5;">
-              We received a request to reset the password for your HR Portal account.
-              Please use the following One-Time Password (OTP) to complete your password reset process.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-              <span style="display: inline-block; padding: 15px 30px; background-color: #f8f9fa; border: 2px dashed #f7941d; border-radius: 6px; font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #333;">
-                ${otp}
-              </span>
-            </div>
-            <p style="font-size: 14px; color: #777; line-height: 1.5;">
-              This OTP is valid for <strong>15 minutes</strong>. For your security, do not share this code with anyone.
-            </p>
-            <p style="font-size: 14px; color: #777; line-height: 1.5;">
-              If you did not request a password reset, please ignore this email or contact the IT administrator if you have concerns.
-            </p>
-            <hr style="border: none; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-            <p style="font-size: 12px; color: #aaa; text-align: center;">
-              This is an automated message, please do not reply.
-            </p>
-          </div>
-        </div>
-      `,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log(`[Email] Password reset OTP sent to ${toEmail}. Message ID: ${info.messageId}`);
-    return true;
-  } catch (error) {
-    console.error('[Email] Password reset email failed:', error.message);
-    if (error.response) console.error('[Email] Provider response:', error.response);
-    if (error.responseCode) console.error('[Email] Provider response code:', error.responseCode);
-    return false;
-  }
-};
-
 /**
  * Generic email sender used by the RabbitMQ email consumer for automated HR reminders.
  */

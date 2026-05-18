@@ -4,7 +4,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import BulkUploadModal from '../components/BulkUploadModal';
 
-const HRAllEmployees = () => {
+const AllEmployees = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -18,7 +18,7 @@ const HRAllEmployees = () => {
 
   const fetchAllEmployees = async () => {
     try {
-      const response = await axios.get('/hr/all-employees');
+      const response = await axios.get('/employees/all');
       setEmployees(response.data);
     } catch (err) {
       setError('Failed to load employees');
@@ -33,9 +33,51 @@ const HRAllEmployees = () => {
       emp.user.emp_code?.toLowerCase().includes(searchLower) ||
       emp.personal?.fullName?.toLowerCase().includes(searchLower) ||
       emp.professional?.department?.toLowerCase().includes(searchLower) ||
-      emp.professional?.jobTitle?.toLowerCase().includes(searchLower)
+      emp.professional?.jobTitle?.toLowerCase().includes(searchLower) ||
+      emp.user.status?.toLowerCase().includes(searchLower)
     );
   });
+
+  const completeCount = employees.filter((employee) => Number(employee.completionPercentage || 0) >= 100).length;
+  const incompleteCount = employees.length - completeCount;
+  const getEmployeeStatus = (status) => (status === 'rejected' ? 'rejected' : 'approved');
+
+  const getCompletionTone = (percentage) => {
+    if (percentage >= 100) return 'var(--color-success, #1f8b4c)';
+    if (percentage >= 60) return '#c08a00';
+    return '#b42318';
+  };
+
+  const renderCompletionBar = (percentage) => {
+    const safePercentage = Math.max(0, Math.min(100, Number(percentage || 0)));
+
+    return (
+      <div style={{ minWidth: '160px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '6px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+          <span>Completion</span>
+          <strong style={{ color: getCompletionTone(safePercentage) }}>{safePercentage}%</strong>
+        </div>
+        <div
+          style={{
+            height: '10px',
+            borderRadius: '999px',
+            background: 'rgba(15, 23, 42, 0.08)',
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            style={{
+              width: `${safePercentage}%`,
+              height: '100%',
+              borderRadius: 'inherit',
+              background: `linear-gradient(90deg, ${getCompletionTone(safePercentage)}, rgba(15, 23, 42, 0.75))`,
+              transition: 'width 180ms ease'
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
 
   const exportToExcel = async () => {
     try {
@@ -44,7 +86,6 @@ const HRAllEmployees = () => {
         return;
       }
 
-      // Prepare Data for multiple sheets
       const personalSheet = employees.map(emp => ({
         EmpCode: emp.user?.emp_code,
         Email: emp.user?.email,
@@ -118,7 +159,6 @@ const HRAllEmployees = () => {
         SecondaryContactMobile: emp.emergency?.emergencyContact2?.mobile || ''
       }));
 
-      // Generate Workbook
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(personalSheet), 'Personal');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(professionalSheet), 'Professional');
@@ -127,7 +167,6 @@ const HRAllEmployees = () => {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bankSheet), 'Bank');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(emergencySheet), 'Emergency');
 
-      // Export file
       XLSX.writeFile(wb, 'Saeculum_Employees_Data.xlsx');
     } catch (err) {
       console.error('Export Error:', err);
@@ -145,10 +184,10 @@ const HRAllEmployees = () => {
         <div className="page-header-row">
           <div>
             <h1>All Employees</h1>
-            <p>{employees.length} approved employee(s)</p>
+            <p>{employees.length} employee(s) · {incompleteCount} need more details</p>
           </div>
           <div className="page-actions">
-            <button type="button" className="btn btn-primary" onClick={() => navigate('/hr/add-employee')}>
+            <button type="button" className="btn btn-primary" onClick={() => navigate('/add-employee')}>
               <i className="ti ti-plus" aria-hidden="true" /> Add Employee
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setIsBulkUploadOpen(true)}>
@@ -191,6 +230,8 @@ const HRAllEmployees = () => {
                   <th>Department</th>
                   <th>Job Title</th>
                   <th>Joined</th>
+                  <th>Status</th>
+                  <th>Completion</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -207,15 +248,30 @@ const HRAllEmployees = () => {
                         : 'N/A'}
                     </td>
                     <td>
+                      <span className={`badge badge-${getEmployeeStatus(employee.user.status)}`}>
+                        {getEmployeeStatus(employee.user.status) === 'approved' ? 'Active' : 'Rejected'}
+                      </span>
+                    </td>
+                    <td>{renderCompletionBar(employee.completionPercentage)}</td>
+                    <td>
                       <div className="table-actions">
                         <button
                           type="button"
                           className="btn-icon"
                           title="View details"
                           aria-label="View details"
-                          onClick={() => navigate(`/hr/employee/${employee.user.id}`)}
+                          onClick={() => navigate(`/employees/${employee.user.id}`)}
                         >
                           <i className="ti ti-eye" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          title={Number(employee.completionPercentage || 0) >= 100 ? 'Edit employee' : 'Fill remaining details'}
+                          aria-label={Number(employee.completionPercentage || 0) >= 100 ? 'Edit employee' : 'Fill remaining details'}
+                          onClick={() => navigate(`/add-employee?edit=${employee.user.id}`)}
+                        >
+                          <i className="ti ti-pencil" aria-hidden="true" />
                         </button>
                       </div>
                     </td>
@@ -230,4 +286,4 @@ const HRAllEmployees = () => {
   );
 };
 
-export default HRAllEmployees;
+export default AllEmployees;

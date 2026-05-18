@@ -25,7 +25,6 @@ export async function runProfileCheck() {
   // Approved employees; approval date is represented by the professional record creation date.
   const approvedUsers = await User.find({
     status:    'approved',
-    role:      'employee',
     emp_code:  { $exists: true, $ne: null }
   });
 

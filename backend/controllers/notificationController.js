@@ -1,40 +1,18 @@
-import NotificationModel from '../models/NotificationModel.js';
-import { ROLES } from '../config/rbac.js';
-
-const notificationScopeForUser = (user) => {
-  if (user.role === ROLES.HR) {
-    return {
-      $or: [
-        { toRole: ROLES.HR },
-        { toRole: 'all' },
-        { toUserId: user.userId }
-      ]
-    };
-  }
-
-  const orConditions = [{ toUserId: user.userId }];
-  if (user.emp_code) {
-    orConditions.push({ toEmpCode: user.emp_code });
-  }
-  return { $or: orConditions };
-};
+import NotificationModel from "../models/NotificationModel.js";
 
 // @desc    Get notifications for current user
 // @route   GET /api/notifications
 // @access  Private
 export const getNotifications = async (req, res) => {
   try {
-    const query = notificationScopeForUser(req.user);
-
-    const notifications = await NotificationModel.find(query)
+    const notifications = await NotificationModel.find({})
       .sort({ createdAt: -1 })
       .limit(50);
 
     res.json(notifications);
-
   } catch (error) {
-    console.error('Get notifications error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get notifications error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -43,23 +21,19 @@ export const getNotifications = async (req, res) => {
 // @access  Private
 export const markAsRead = async (req, res) => {
   try {
-    const notification = await NotificationModel.findOne({
-      _id: req.params.id,
-      ...notificationScopeForUser(req.user)
-    });
-    
+    const notification = await NotificationModel.findById(req.params.id);
+
     if (!notification) {
-      return res.status(404).json({ message: 'Notification not found' });
+      return res.status(404).json({ message: "Notification not found" });
     }
 
     notification.isRead = true;
     await notification.save();
 
-    res.json({ message: 'Notification marked as read' });
-
+    res.json({ message: "Notification marked as read" });
   } catch (error) {
-    console.error('Mark notification read error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Mark notification read error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -68,17 +42,11 @@ export const markAsRead = async (req, res) => {
 // @access  Private
 export const getUnreadCount = async (req, res) => {
   try {
-    const query = {
-      isRead: false,
-      ...notificationScopeForUser(req.user)
-    };
-
-    const count = await NotificationModel.countDocuments(query);
+    const count = await NotificationModel.countDocuments({ isRead: false });
 
     res.json({ count });
-
   } catch (error) {
-    console.error('Get unread count error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get unread count error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

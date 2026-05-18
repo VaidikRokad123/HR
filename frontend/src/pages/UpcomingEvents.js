@@ -12,14 +12,10 @@ const SECTIONS = [
 
 const fmt = (dateStr) =>
   dateStr
-    ? new Date(dateStr).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
+    ? new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—';
 
-const HRUpcomingEvents = () => {
+const UpcomingEvents = () => {
   const [events, setEvents] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,7 +27,7 @@ const HRUpcomingEvents = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.get('/hr/upcoming-events');
+      const res = await axios.get('/employees/upcoming-events');
       setEvents(res.data);
     } catch (err) {
       setError('Failed to load upcoming events.');
@@ -48,8 +44,8 @@ const HRUpcomingEvents = () => {
     setTriggering(true);
     setTriggerMsg('');
     try {
-      await axios.post('/hr/trigger-reminders');
-      setTriggerMsg('Reminders triggered. Emails sent to HR inbox.');
+      await axios.post('/employees/trigger-reminders');
+      setTriggerMsg('Reminders triggered. Emails sent to inbox.');
     } catch {
       setTriggerMsg('Failed to trigger reminders. Check if RabbitMQ is running.');
     } finally {
@@ -84,9 +80,7 @@ const HRUpcomingEvents = () => {
         <div className="page-header-row">
           <div>
             <h1>Upcoming Events</h1>
-            <p>
-              Next 7 days · {loading ? '...' : `${totalAlerts} alert(s)`}
-            </p>
+            <p>Next 7 days · {loading ? '...' : `${totalAlerts} alert(s)`}</p>
           </div>
           <div className="page-actions">
             <button type="button" className="btn btn-secondary" onClick={fetchEvents} disabled={loading}>
@@ -131,9 +125,7 @@ const HRUpcomingEvents = () => {
                     items.map((item, i) => (
                       <div key={i} className="event-item">
                         <div>
-                          <div className="event-item-name">
-                            {item.fullName || item.email || item.emp_code}
-                          </div>
+                          <div className="event-item-name">{item.fullName || item.email || item.emp_code}</div>
                           <div className="event-item-meta">
                             {item.emp_code}
                             {item.department ? ` · ${item.department}` : ''}
@@ -145,7 +137,7 @@ const HRUpcomingEvents = () => {
                           <button
                             type="button"
                             className="btn btn-sm btn-secondary"
-                            onClick={() => navigate('/hr/all-employees')}
+                            onClick={() => navigate('/employees')}
                           >
                             View
                           </button>
@@ -163,4 +155,4 @@ const HRUpcomingEvents = () => {
   );
 };
 
-export default HRUpcomingEvents;
+export default UpcomingEvents;

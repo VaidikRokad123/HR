@@ -1,8 +1,8 @@
 import { stripHtml } from '../../utils/htmlHelpers.js';
 
-export const TOP_PADDING_MM = 30;
+export const TOP_PADDING_MM = 45;
 export const SIDE_PADDING_MM = 25;
-export const BOTTOM_SAFE_MM = 28;
+export const BOTTOM_SAFE_MM = 34;
 export const PAGE_HEIGHT_MM = 297;
 export const CONTENT_MAX_HEIGHT_MM = PAGE_HEIGHT_MM - TOP_PADDING_MM - BOTTOM_SAFE_MM;
 export const CONTENT_WIDTH_MM = 210 - (SIDE_PADDING_MM * 2);

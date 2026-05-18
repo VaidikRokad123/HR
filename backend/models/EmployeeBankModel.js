@@ -31,6 +31,10 @@ const employeeBankSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  accountHolderName: {
+    type: String,
+    trim: true
+  },
   branch: {
     type: String,
     trim: true

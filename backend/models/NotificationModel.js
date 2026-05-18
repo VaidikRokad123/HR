@@ -1,31 +1,31 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
   toRole: {
     type: String,
-    enum: ['hr', 'employee', 'all'],
-    required: true
+    enum: ["admin", "all"],
+    default: "admin",
   },
   toEmpCode: {
     type: String,
-    default: null
+    default: null,
   },
   toUserId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: "User",
   },
   message: {
     type: String,
-    required: true
+    required: true,
   },
   isRead: {
     type: Boolean,
-    default: false
+    default: false,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
-export default mongoose.model('Notification', notificationSchema);
+export default mongoose.model("Notification", notificationSchema);

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import './HRDocuments.css';
+import './Documents.css';
 
 const fieldLabels = {
   name: 'Name',
@@ -35,7 +35,7 @@ const initialForm = {
   signatoryTitle: 'DIRECTOR'
 };
 
-function HRDocuments() {
+function Documents() {
   const navigate = useNavigate();
   const [documentTypes, setDocumentTypes] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -54,7 +54,7 @@ function HRDocuments() {
       try {
         const [typesResponse, employeesResponse] = await Promise.all([
           axios.get('/documents/types'),
-          axios.get('/hr/all-employees')
+          axios.get('/employees/all')
         ]);
         setDocumentTypes(typesResponse.data);
         setEmployees(employeesResponse.data);
@@ -64,7 +64,6 @@ function HRDocuments() {
         setLoading(false);
       }
     }
-
     loadData();
   }, []);
 
@@ -102,9 +101,8 @@ function HRDocuments() {
     try {
       setPreparing(true);
       setError('');
-
       const response = await axios.post(`/documents/offer-letter/${selectedEmployeeId}/prepare`, form);
-      navigate('/hr/documents/editor', {
+      navigate('/documents/editor', {
         state: {
           pages: response.data.data.pages,
           metadata: response.data.data.metadata,
@@ -162,9 +160,7 @@ function HRDocuments() {
           </div>
           <div className="wizard-buttons">
             <span />
-            <button type="button" className="btn btn-primary" onClick={() => setStep(2)}>
-              Continue
-            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setStep(2)}>Continue</button>
           </div>
         </div>
       )}
@@ -200,9 +196,7 @@ function HRDocuments() {
                     <td>{employee.user.email}</td>
                     <td>
                       <div className="table-actions">
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => inspectEmployee(employee.user.id)}>
-                          Choose
-                        </button>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => inspectEmployee(employee.user.id)}>Choose</button>
                       </div>
                     </td>
                   </tr>
@@ -235,10 +229,7 @@ function HRDocuments() {
           )}
 
           <div className="grid-3">
-            <div className="form-group">
-              <label>Name</label>
-              <input value={form.name} onChange={(event) => updateField('name', event.target.value)} />
-            </div>
+            <div className="form-group"><label>Name</label><input value={form.name} onChange={(event) => updateField('name', event.target.value)} /></div>
             <div className="form-group">
               <label>Gender</label>
               <select value={form.gender} onChange={(event) => updateField('gender', event.target.value)}>
@@ -262,22 +253,10 @@ function HRDocuments() {
                 <option value="year">Year</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Duration</label>
-              <input type="number" min="1" value={form.duration} onChange={(event) => updateField('duration', event.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Role</label>
-              <input value={form.role} onChange={(event) => updateField('role', event.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Start Date</label>
-              <input type="date" value={form.startDate} onChange={(event) => updateField('startDate', event.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>End Date</label>
-              <input type="date" value={form.endDate} onChange={(event) => updateField('endDate', event.target.value)} />
-            </div>
+            <div className="form-group"><label>Duration</label><input type="number" min="1" value={form.duration} onChange={(event) => updateField('duration', event.target.value)} /></div>
+            <div className="form-group"><label>Role</label><input value={form.role} onChange={(event) => updateField('role', event.target.value)} /></div>
+            <div className="form-group"><label>Start Date</label><input type="date" value={form.startDate} onChange={(event) => updateField('startDate', event.target.value)} /></div>
+            <div className="form-group"><label>End Date</label><input type="date" value={form.endDate} onChange={(event) => updateField('endDate', event.target.value)} /></div>
             <div className="form-group">
               <label>Salary Type</label>
               <select value={form.salaryType} onChange={(event) => updateField('salaryType', event.target.value)}>
@@ -286,23 +265,11 @@ function HRDocuments() {
               </select>
             </div>
             {form.salaryType === 'paid' && (
-              <div className="form-group">
-                <label>Salary Amount</label>
-                <input value={form.salaryAmount} onChange={(event) => updateField('salaryAmount', event.target.value)} />
-              </div>
+              <div className="form-group"><label>Salary Amount</label><input value={form.salaryAmount} onChange={(event) => updateField('salaryAmount', event.target.value)} /></div>
             )}
-            <div className="form-group">
-              <label>Company Name</label>
-              <input value={form.companyName} onChange={(event) => updateField('companyName', event.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Signatory</label>
-              <input value={form.signatoryName} onChange={(event) => updateField('signatoryName', event.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Signatory Title</label>
-              <input value={form.signatoryTitle} onChange={(event) => updateField('signatoryTitle', event.target.value)} />
-            </div>
+            <div className="form-group"><label>Company Name</label><input value={form.companyName} onChange={(event) => updateField('companyName', event.target.value)} /></div>
+            <div className="form-group"><label>Signatory</label><input value={form.signatoryName} onChange={(event) => updateField('signatoryName', event.target.value)} /></div>
+            <div className="form-group"><label>Signatory Title</label><input value={form.signatoryTitle} onChange={(event) => updateField('signatoryTitle', event.target.value)} /></div>
           </div>
 
           <div className="wizard-buttons">
@@ -317,4 +284,4 @@ function HRDocuments() {
   );
 }
 
-export default HRDocuments;
+export default Documents;

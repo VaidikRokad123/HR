@@ -105,20 +105,20 @@ export function buildHtmlContent(data, assets) {
 <head>
 <meta charset="utf-8" />
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;}
 @page{size:A4;margin:0;}
 html,body{margin:0;padding:0;width:210mm;min-height:297mm;}
 body{font-family:Arial,sans-serif;font-size:11pt;line-height:1.5;color:#000;print-color-adjust:exact;-webkit-print-color-adjust:exact;}
 .pdf-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;position:relative;overflow:hidden;page-break-inside:avoid;background-image:url('${templateUrl}');background-position:center top;background-repeat:no-repeat;background-size:210mm 297mm;}
 .next-page{page-break-before:always;break-before:page;}
 .pdf-page::after{content:'';position:absolute;inset:0;${transparentUrl ? `background-image:url('${transparentUrl}');background-repeat:no-repeat;background-position:center top;background-size:210mm 297mm;` : ''}pointer-events:none;z-index:0;}
-.page-content{padding:30mm 25mm 28mm;position:relative;z-index:1;font-size:11pt;line-height:1.5;height:239mm;max-height:239mm;overflow:visible;box-sizing:content-box;}
-p{text-align:justify;margin:0;line-height:1.5;word-spacing:0;letter-spacing:0;text-justify:inter-word;}
-.paragraph-block{margin-bottom:4mm;padding-bottom:1mm;page-break-inside:avoid;break-inside:avoid;}
+.page-content{box-sizing:border-box;width:210mm;padding:45mm 25mm 34mm;position:relative;z-index:1;font-size:11pt;line-height:1.5;overflow:hidden;}
+p{text-align:justify;margin:0;line-height:1.5;text-justify:inter-word;word-wrap:break-word;overflow-wrap:break-word;}
+.paragraph-block{margin-bottom:4mm;padding-bottom:1mm;}
 .date{text-align:right;margin-bottom:6mm;padding-bottom:1mm;white-space:nowrap;}
 .subject{text-align:center;font-weight:700;margin-top:4mm;margin-bottom:4mm;padding-bottom:1mm;}
 .to-line{line-height:1.5;margin-bottom:4mm;padding-bottom:1mm;}
-.signature-block{margin-top:6mm;line-height:1.5;margin-bottom:4mm;padding-bottom:2mm;page-break-inside:avoid;break-inside:avoid;}
+.signature-block{margin-top:6mm;line-height:1.5;margin-bottom:4mm;padding-bottom:2mm;}
 .signature-block div{margin-bottom:1mm;}
 .company-name{margin-top:4mm;margin-bottom:4mm;padding-bottom:2mm;}
 .separator{margin-top:4mm;margin-bottom:4mm;padding-bottom:2mm;}

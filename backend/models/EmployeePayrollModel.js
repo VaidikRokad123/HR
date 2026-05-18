@@ -35,7 +35,17 @@ const employeePayrollSchema = new mongoose.Schema({
   tds: {
     type: Boolean,
     default: false
-  }
+  },
+  history: [{
+    ctc: Number,
+    gross: Number,
+    pf: Boolean,
+    pt: Boolean,
+    esic: Boolean,
+    tds: Boolean,
+    updatedAt: { type: Date, default: Date.now },
+    changeType: { type: String, default: 'update' } // e.g. 'initial', 'update'
+  }]
 }, { timestamps: true });
 
 export default mongoose.model('EmployeePayroll', employeePayrollSchema);

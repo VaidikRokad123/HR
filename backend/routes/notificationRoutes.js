@@ -1,22 +1,21 @@
 import express from 'express';
 import { getNotifications, markAsRead, getUnreadCount } from '../controllers/notificationController.js';
-import { auth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // @route   GET /api/notifications/unread-count
 // @desc    Get unread notification count
-// @access  Private
-router.get('/unread-count', auth, getUnreadCount);
+// @access  Public
+router.get('/unread-count', getUnreadCount);
 
 // @route   GET /api/notifications
-// @desc    Get notifications for current user
-// @access  Private
-router.get('/', auth, getNotifications);
+// @desc    Get notifications
+// @access  Public
+router.get('/', getNotifications);
 
 // @route   PUT /api/notifications/:id/read
 // @desc    Mark notification as read
-// @access  Private
-router.put('/:id/read', auth, markAsRead);
+// @access  Public
+router.put('/:id/read', markAsRead);
 
 export default router;
