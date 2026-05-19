@@ -27,10 +27,10 @@ const getDesignation = (employee) =>
 const initialOfferForm = {
   name: "",
   gender: "",
-  internType: "internship",
-  durationType: "month",
-  duration: "",
   role: "",
+  internType: "internship",
+  durationType: "",
+  duration: "",
   startDate: "",
   endDate: "",
   salaryType: "paid",
@@ -38,6 +38,16 @@ const initialOfferForm = {
   companyName: "Saeculum Solutions Pvt. Ltd.",
   signatoryName: "HARDIKKUMAR VINZAVA",
   signatoryTitle: "DIRECTOR",
+};
+
+const initialJobOfferForm = {
+  fullName: "",
+  gender: "",
+  designation: "",
+  ctcPerYear: "",
+  dateJoining: "",
+  officialEmail: "",
+  reportingManager: "",
 };
 
 const initialAppraisalForm = {
@@ -51,13 +61,13 @@ const initialAppraisalForm = {
   signatoryTitle: "DIRECTOR",
 };
 
-const initialForm = { ...initialOfferForm, ...initialAppraisalForm };
+const initialForm = { ...initialOfferForm, ...initialJobOfferForm, ...initialAppraisalForm };
 
 function Documents() {
   const navigate = useNavigate();
   const [documentTypes, setDocumentTypes] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [selectedType, setSelectedType] = useState("offer-letter");
+  const [selectedType, setSelectedType] = useState("job-offer-letter");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [form, setForm] = useState(initialForm);
@@ -107,16 +117,17 @@ function Documents() {
       const endpoint =
         selectedType === "appraisal-letter"
           ? `/documents/appraisal-letter/${employeeId}/inspect`
+          : selectedType === "job-offer-letter"
+          ? `/documents/job-offer-letter/${employeeId}/inspect`
+          : selectedType === "internship-offer-letter"
+          ? `/documents/offer-letter/${employeeId}/inspect`
           : `/documents/offer-letter/${employeeId}/inspect`;
       const response = await axios.get(endpoint);
       setForm({ ...initialForm, ...response.data.values });
       setMissingFields(response.data.missingFields || []);
       setStep(3);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to inspect employee information.",
-      );
+      setError(err.response?.data?.message || "Failed to inspect employee information.");
     }
   };
 
@@ -132,6 +143,10 @@ function Documents() {
       const endpoint =
         selectedType === "appraisal-letter"
           ? `/documents/appraisal-letter/${selectedEmployeeId}/prepare`
+          : selectedType === "job-offer-letter"
+          ? `/documents/job-offer-letter/${selectedEmployeeId}/prepare`
+          : selectedType === "internship-offer-letter"
+          ? `/documents/offer-letter/${selectedEmployeeId}/prepare`
           : `/documents/offer-letter/${selectedEmployeeId}/prepare`;
       const response = await axios.post(endpoint, form);
       navigate("/documents/editor", {
@@ -299,118 +314,133 @@ function Documents() {
           )}
 
           <div className="grid-3">
-            <div className="form-group">
-              <label>Name</label>
-              <input
-                value={form.name}
-                onChange={(event) => updateField("name", event.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label>Gender</label>
-              <select
-                value={form.gender}
-                onChange={(event) => updateField("gender", event.target.value)}
-              >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Role / Designation</label>
-              <input
-                value={form.role}
-                onChange={(event) => updateField("role", event.target.value)}
-              />
-            </div>
-
-            {selectedType === "offer-letter" && (
+            {selectedType === "internship-offer-letter" && (
               <>
                 <div className="form-group">
-                  <label>Job Type</label>
+                  <label>Name</label>
+                  <input
+                    value={form.name}
+                    onChange={(event) => updateField("name", event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Gender</label>
                   <select
-                    value={form.internType}
-                    onChange={(event) =>
-                      updateField("internType", event.target.value)
-                    }
+                    value={form.gender}
+                    onChange={(event) => updateField("gender", event.target.value)}
                   >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Role</label>
+                  <input
+                    value={form.role}
+                    onChange={(event) => updateField("role", event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Job Type</label>
+                  <select value={form.internType} onChange={(e) => updateField("internType", e.target.value)}>
+                    <option value="">Select type</option>
                     <option value="internship">Internship</option>
-                    <option value="part time">Part Time</option>
-                    <option value="full time">Full Time</option>
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Duration Type</label>
-                  <select
-                    value={form.durationType}
-                    onChange={(event) =>
-                      updateField("durationType", event.target.value)
-                    }
-                  >
-                    <option value="month">Month</option>
-                    <option value="year">Year</option>
+                  <select value={form.durationType} onChange={(e) => updateField("durationType", e.target.value)}>
+                    <option value="">Select duration type</option>
+                    <option value="Months">Months</option>
+                    <option value="Days">Days</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Duration</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.duration}
-                    onChange={(event) =>
-                      updateField("duration", event.target.value)
-                    }
-                  />
+                  <input type="number" value={form.duration} onChange={(e) => updateField("duration", e.target.value)} placeholder="e.g. 6" />
                 </div>
                 <div className="form-group">
                   <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={form.startDate}
-                    onChange={(event) =>
-                      updateField("startDate", event.target.value)
-                    }
-                  />
+                  <input type="date" value={form.startDate} onChange={(e) => updateField("startDate", e.target.value)} />
                 </div>
                 <div className="form-group">
                   <label>End Date</label>
-                  <input
-                    type="date"
-                    value={form.endDate}
-                    onChange={(event) =>
-                      updateField("endDate", event.target.value)
-                    }
-                  />
+                  <input type="date" value={form.endDate} onChange={(e) => updateField("endDate", e.target.value)} />
                 </div>
                 <div className="form-group">
                   <label>Salary Type</label>
-                  <select
-                    value={form.salaryType}
-                    onChange={(event) =>
-                      updateField("salaryType", event.target.value)
-                    }
-                  >
+                  <select value={form.salaryType} onChange={(e) => updateField("salaryType", e.target.value)}>
                     <option value="paid">Paid</option>
                     <option value="unpaid">Unpaid</option>
                   </select>
                 </div>
                 {form.salaryType === "paid" && (
                   <div className="form-group">
-                    <label>Salary Amount</label>
-                    <input
-                      value={form.salaryAmount}
-                      onChange={(event) =>
-                        updateField("salaryAmount", event.target.value)
-                      }
-                    />
+                    <label>Stipend Amount</label>
+                    <input type="number" value={form.salaryAmount} onChange={(e) => updateField("salaryAmount", e.target.value)} placeholder="e.g. 15000" />
                   </div>
                 )}
               </>
             )}
 
+            {selectedType === "job-offer-letter" && (
+              <>
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input value={form.fullName} onChange={(e) => updateField("fullName", e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Gender</label>
+                  <select value={form.gender} onChange={(e) => updateField("gender", e.target.value)}>
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Designation</label>
+                  <input value={form.designation} onChange={(e) => updateField("designation", e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>CTC Per Year</label>
+                  <input type="number" value={form.ctcPerYear} onChange={(e) => updateField("ctcPerYear", e.target.value)} placeholder="e.g. 500000" />
+                </div>
+                <div className="form-group">
+                  <label>Date of Joining</label>
+                  <input type="date" value={form.dateJoining} onChange={(e) => updateField("dateJoining", e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Official Email</label>
+                  <input type="email" value={form.officialEmail} onChange={(e) => updateField("officialEmail", e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Reporting Manager</label>
+                  <input value={form.reportingManager} onChange={(e) => updateField("reportingManager", e.target.value)} placeholder="Optional" />
+                </div>
+              </>
+            )}
+
             {selectedType === "appraisal-letter" && (
               <>
+                <div className="form-group">
+                  <label>Name</label>
+                  <input value={form.name} onChange={(event) => updateField("name", event.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Gender</label>
+                  <select value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Role</label>
+                  <input value={form.role} onChange={(event) => updateField("role", event.target.value)} />
+                </div>
                 <div className="form-group">
                   <label>Current CTC</label>
                   <input

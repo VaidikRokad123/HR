@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { escapeHtml } from '../../utils/htmlHelpers.js';
-import { formatOrdinalDate } from '../../utils/dateFormatter.js';
+import { escapeHtml } from '../../../utils/htmlHelpers.js';
+import { formatOrdinalDate } from '../../../utils/dateFormatter.js';
 import { estimateBlockHeightMm } from './pdfLayout.js';
 import { repaginateForFooterSafety } from './pdfPagination.js';
 
@@ -52,13 +52,31 @@ export function replaceVariables(text, metadata = {}) {
   ), text);
 }
 
-export function resolveOfferLetterAssets() {
+export function resolveOfferLetterAssets(signatoryName = '') {
   const templatePath = findFirstExistingAsset(['temp.jpg', 'temp.png']);
-  const signPath = findFirstExistingAsset(['sign2.png', 'sign.png']);
   const transparentPath = findFirstExistingAsset(['transparent.png']);
 
   if (!templatePath) {
     throw new Error('Missing document template at backend/company/template/temp.jpg.');
+  }
+
+  // Resolve signature image from company/signature directory
+  const SIGNATURE_DIR = path.join(process.cwd(), 'company', 'signature');
+  let signPath = null;
+
+  if (fs.existsSync(SIGNATURE_DIR)) {
+    // Try exact match by signatory name first
+    const signatoryFile = signatoryName
+      ? [`${signatoryName}.png`, `${signatoryName}.jpg`].find(f => fs.existsSync(path.join(SIGNATURE_DIR, f)))
+      : null;
+
+    if (signatoryFile) {
+      signPath = path.join(SIGNATURE_DIR, signatoryFile);
+    } else {
+      // Fall back: pick the first image file in the folder
+      const files = fs.readdirSync(SIGNATURE_DIR).filter(f => /\.(png|jpg|jpeg)$/i.test(f));
+      if (files.length > 0) signPath = path.join(SIGNATURE_DIR, files[0]);
+    }
   }
 
   return {
@@ -97,7 +115,7 @@ export function buildHtmlContent(data, assets) {
         case 'image':
           return `<div style="margin:10mm 0;"><img src="${para.content}" style="max-width:100%;height:auto;" /></div>`;
         default:
-          return `<div class="paragraph-block avoid-break"><p>${escapeHtml(processedContent)}</p></div>`;
+          return `<div class="paragraph-block avoid-break"><p>${processedContent}</p></div>`;
       }
     }).join('');
 

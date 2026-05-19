@@ -4,16 +4,18 @@ import {
   employeeQueryForUser,
   toCompatSections,
 } from "../utils/employeeCompat.js";
-import { buildOfferLetterStructuredData } from "../services/offerLetter/offerLetterDataBuilder.js";
-import { buildAppraisalLetterStructuredData } from "../utils/appraisalLetterDataBuilder.js";
-import { generatePDFFromData } from "../services/offerLetter/pdfGenerator.js";
+import { buildInternshipOfferLetterStructuredData } from "../services/document/builders/internshipOfferLetterBuilder.js";
+import { buildAppraisalLetterStructuredData } from "../services/document/builders/appraisalLetterBuilder.js";
+import { buildJobOfferLetterStructuredData } from "../services/document/builders/jobOfferLetterBuilder.js";
+import { generatePDFFromData } from "../services/document/core/pdfGenerator.js";
 import {
-  getLastOfferLetterData,
-  setLastOfferLetterData,
-} from "../services/offerLetter/offerLetterState.js";
+  getLastDocumentData,
+  setLastDocumentData,
+} from "../services/document/core/documentState.js";
 
 const DOCUMENT_TYPES = [
-  { id: "offer-letter", label: "Offer Letter", available: true },
+  { id: "job-offer-letter", label: "Job Offer Letter", available: true },
+  { id: "internship-offer-letter", label: "Internship Offer Letter", available: true },
   { id: "appraisal-letter", label: "Appraisal Letter", available: true },
   {
     id: "experience-certificate",
@@ -167,14 +169,14 @@ export async function prepareOfferLetter(req, res) {
         .json({ message: "Missing required fields", missingFields, values });
     }
 
-    const data = buildOfferLetterStructuredData({
+    const data = buildInternshipOfferLetterStructuredData({
       ...values,
       documentType: "offer-letter",
       employeeId: employee.user._id,
       emp_code: employee.user.emp_code,
     });
 
-    setLastOfferLetterData(data);
+    setLastDocumentData(data);
     res.json({ success: true, data });
   } catch (error) {
     console.error("Prepare offer letter error:", error);
@@ -186,7 +188,7 @@ export async function prepareOfferLetter(req, res) {
 }
 
 export async function getDocumentDraft(req, res) {
-  const data = getLastOfferLetterData();
+  const data = getLastDocumentData();
   if (!data) {
     return res.status(404).json({ message: "No document draft found" });
   }
@@ -202,11 +204,11 @@ export async function compileDocument(req, res) {
     }
 
     const data = {
-      metadata: metadata || getLastOfferLetterData()?.metadata || {},
+      metadata: metadata || getLastDocumentData()?.metadata || {},
       pages,
     };
 
-    setLastOfferLetterData(data);
+    setLastDocumentData(data);
     const pdfUrl = await generatePDFFromData(data);
     res.json({
       success: true,
@@ -270,7 +272,7 @@ export async function prepareAppraisalLetter(req, res) {
       emp_code: employee.user.emp_code,
     });
 
-    setLastOfferLetterData(data);
+    setLastDocumentData(data);
     res.json({ success: true, data });
   } catch (error) {
     console.error("Prepare appraisal letter error:", error);
@@ -278,6 +280,79 @@ export async function prepareAppraisalLetter(req, res) {
     res
       .status(statusCode)
       .json({ message: error.message || "Failed to prepare appraisal letter" });
+  }
+}
+
+export async function inspectJobOfferLetter(req, res) {
+  try {
+    const employee = await loadEmployee(req.params.userId);
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
+
+    const personal = employee.personal || {};
+    const professional = employee.professional || {};
+    const payroll = employee.payroll || {};
+
+    const values = {
+      fullName: personal.fullName || "",
+      gender: personal.gender ? String(personal.gender).toLowerCase() : "",
+      designation: professional.designation || professional.jobTitle || "",
+      ctcPerYear: payroll.ctcPerYear || "",
+      dateJoining: professional.dateJoining || professional.dateJoined || "",
+      officialEmail: professional.officialEmail || "",
+      personalEmail: personal.personalEmail || "",
+      reportingManager: professional.reportingManager || "",
+      permanentAddress: personal.permanentAddress || {},
+      currentAddress: personal.currentAddress || {},
+    };
+
+    const missingFields = ['fullName','designation','ctcPerYear','dateJoining'].filter(f => !values[f]);
+    if (!values.officialEmail && !values.personalEmail) missingFields.push('email');
+
+    res.json({
+      documentType: "job-offer-letter",
+      employee: { id: employee.user._id, emp_code: employee.user.emp_code, email: employee.user.email, name: values.fullName },
+      values,
+      missingFields,
+    });
+  } catch (error) {
+    console.error("Inspect job offer letter error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function prepareJobOfferLetter(req, res) {
+  try {
+    const employee = await loadEmployee(req.params.userId);
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
+
+    const personal = employee.personal || {};
+    const professional = employee.professional || {};
+    const payroll = employee.payroll || {};
+    const overrides = req.body || {};
+
+    const values = {
+      fullName: overrides.fullName || personal.fullName || "",
+      gender: overrides.gender || (personal.gender ? String(personal.gender).toLowerCase() : ""),
+      designation: overrides.designation || professional.designation || professional.jobTitle || "",
+      ctcPerYear: overrides.ctcPerYear || payroll.ctcPerYear || "",
+      dateJoining: overrides.dateJoining || professional.dateJoining || professional.dateJoined || "",
+      officialEmail: overrides.officialEmail || professional.officialEmail || "",
+      personalEmail: overrides.personalEmail || personal.personalEmail || "",
+      reportingManager: overrides.reportingManager || professional.reportingManager || "",
+      permanentAddress: personal.permanentAddress || {},
+      currentAddress: personal.currentAddress || {},
+    };
+
+    const missingFields = ['fullName','designation','ctcPerYear','dateJoining'].filter(f => !values[f]);
+    if (!values.officialEmail && !values.personalEmail) missingFields.push('email');
+    if (missingFields.length > 0) return res.status(400).json({ message: "Missing required fields", missingFields, values });
+
+    const data = buildJobOfferLetterStructuredData(values);
+    setLastDocumentData(data);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("Prepare job offer letter error:", error);
+    res.status(error.message?.includes('required') ? 400 : 500).json({ message: error.message || "Failed to prepare job offer letter" });
   }
 }
 

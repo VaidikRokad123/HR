@@ -1,4 +1,4 @@
-import { stripHtml } from '../../utils/htmlHelpers.js';
+import { stripHtml } from '../../../utils/htmlHelpers.js';
 
 export const TOP_PADDING_MM = 45;
 export const SIDE_PADDING_MM = 25;

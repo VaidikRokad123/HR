@@ -1,10 +1,10 @@
-import { formatOrdinalDate } from '../../utils/dateFormatter.js';
+import { formatOrdinalDate } from '../../../utils/dateFormatter.js';
 
 function pluralizeUnit(value, unit) {
   return `${value} ${unit}${Number(value) > 1 ? 's' : ''}`;
 }
 
-export function buildOfferLetterStructuredData(payload) {
+export function buildInternshipOfferLetterStructuredData(payload) {
   const {
     name,
     gender,
@@ -38,7 +38,7 @@ export function buildOfferLetterStructuredData(payload) {
     ? 'Subject: Internship Offer Letter'
     : `Subject: ${internTypeLabel} Job Offer Letter`;
 
-  const firstParagraph = `This letter is in reference to your application related to a request for a ${tenureText} ${internTypeLabel} at our firm. We are pleased to inform you that you have been granted ${tenureText} at our company and your designation during the ${internTypeLabel} shall be addressed as an ${role} at our company ${companyName} for this ${tenureText} period starting ${formattedStartDate}. Company shall inform your reporting manager at the time of joining. You are required to attend the office on all working days (Monday to Friday, except National holidays and company declared holidays) and your timings shall be from 10:00 AM to 7.00 PM (includes lunch break).`;
+  const firstParagraph = `This letter is in reference to your application related to a request for a ${tenureText} ${internTypeLabel} at our firm. We are pleased to inform you that you have been granted ${tenureText} at our company and your designation during the ${internTypeLabel} shall be addressed as an ${role} at our company <b>${companyName}</b> for this ${tenureText} period starting ${formattedStartDate}. Company shall inform your reporting manager at the time of joining. You are required to attend the office on all working days (Monday to Friday, except National holidays and company declared holidays) and your timings shall be from 10:00 AM to 7.00 PM (includes lunch break).`;
   const secondParagraph = `Your ${internTypeLabel} tenure shall be from ${formattedStartDate} to ${formattedEndDate}. This association shall be considered as completed on ${formattedEndDate} or earlier, unless further extension is communicated in writing. Company shall not have any obligation to recruit you post cessation of your ${internTypeLabel} association with the company.`;
   const salaryParagraph = salaryType === 'paid'
     ? `During the tenure of your ${internTypeLabel}, you shall be paid a stipend/salary of ${salaryAmount} per month.`
@@ -50,6 +50,7 @@ export function buildOfferLetterStructuredData(payload) {
 
   return {
     metadata: {
+      documentType: 'internship-offer-letter',
       name,
       upperName,
       gender,

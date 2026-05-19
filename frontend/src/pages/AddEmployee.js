@@ -72,6 +72,12 @@ const designationByDepartment = {
   ],
   "Sales & Marketing": [
     "Sr. BDE",
+    "Jr. BDE",
+    "BDE",
+    "Sr. Lead Generation",
+    "Jr. Lead Generation",
+    "Lead Generation",
+
   ],
   Design: [
     "Sr. UI/UX",
@@ -332,7 +338,7 @@ const AddEmployee = () => {
     axios
       .get("/admin/ref")
       .then((r) => setRefData(r.data))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   /* ── on mount: edit mode OR check draft ── */
@@ -439,7 +445,7 @@ const AddEmployee = () => {
           if (e.user?.pendingSections?.length)
             setPending(e.user.pendingSections);
         })
-        .catch(() => {});
+        .catch(() => { });
       return;
     }
     const id = localStorage.getItem(DRAFT_KEY);
@@ -501,7 +507,7 @@ const AddEmployee = () => {
     if (draftId) {
       try {
         await axios.delete(`/admin/drafts/${draftId}`);
-      } catch {}
+      } catch { }
     }
     localStorage.removeItem(DRAFT_KEY);
     setDraftId(null);
@@ -547,7 +553,7 @@ const AddEmployee = () => {
     try {
       const r = await axios.get("/admin/next-emp-code");
       set("emp_code", r.data.code);
-    } catch {}
+    } catch { }
   };
 
   /* ── validation per step ── */
@@ -837,7 +843,7 @@ const AddEmployee = () => {
       if (draftId) {
         try {
           await axios.delete(`/admin/drafts/${draftId}`);
-        } catch {}
+        } catch { }
         localStorage.removeItem(DRAFT_KEY);
       }
 
@@ -957,11 +963,23 @@ const AddEmployee = () => {
                 </select>
               </Field>
               <Field label="Religion">
-                <input
+                <select
                   value={form.religion === "not set yet" ? "" : form.religion}
                   onChange={(e) => set("religion", e.target.value)}
-                  placeholder="e.g. Hindu, Muslim…"
-                />
+                >
+                  <option value="">Select religion</option>
+                  {[
+                    "Hindu",
+                    "Muslim",
+                    "Christian",
+                    "Sikh",
+                    "Buddhist",
+                    "Jain",
+                    "Other",
+                  ].map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
               </Field>
               <Field label="Physically Handicapped">
                 <select
@@ -1474,7 +1492,7 @@ const AddEmployee = () => {
                       type="date"
                       value={
                         form.confirmationDate === "not set yet" ||
-                        !form.confirmationDate
+                          !form.confirmationDate
                           ? ""
                           : form.confirmationDate
                       }
@@ -1507,6 +1525,21 @@ const AddEmployee = () => {
                   <span>👔</span> Designation & Reporting
                 </div>
                 <div className="ae-grid-2">
+                  <Field label="Department" required error={errors.department}>
+                    <select
+                      value={form.department}
+                      onChange={(e) => {
+                        set("department", e.target.value);
+                        set("designation", "");
+                      }}
+                      className={errors.department ? "error" : ""}
+                    >
+                      <option value="">Select department</option>
+                      {(refData?.departments || departmentOptions).map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field
                     label="Designation"
                     required
@@ -1528,21 +1561,6 @@ const AddEmployee = () => {
                           <option key={d} value={d}>{d}</option>
                         ));
                       })()}
-                    </select>
-                  </Field>
-                  <Field label="Department" required error={errors.department}>
-                    <select
-                      value={form.department}
-                      onChange={(e) => {
-                        set("department", e.target.value);
-                        set("designation", "");
-                      }}
-                      className={errors.department ? "error" : ""}
-                    >
-                      <option value="">Select department</option>
-                      {(refData?.departments || departmentOptions).map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
                     </select>
                   </Field>
                   <Field label="Reporting Manager">
@@ -1621,19 +1639,6 @@ const AddEmployee = () => {
                   <span>💵</span> CTC Structure
                 </div>
                 <div className="ae-grid-2">
-                  <Field
-                    label="Gross Per Month"
-                    required
-                    error={errors.grossPerMonth}
-                  >
-                    <input
-                      type="number"
-                      value={form.grossPerMonth}
-                      onChange={(e) => set("grossPerMonth", e.target.value)}
-                      className={errors.grossPerMonth ? "error" : ""}
-                      placeholder="e.g. 50000"
-                    />
-                  </Field>
                   <Field label="CTC Per Year" required error={errors.ctcPerYear}>
                     <input
                       type="number"
@@ -1650,6 +1655,19 @@ const AddEmployee = () => {
                       onChange={(e) => set("salaryPerMonth", e.target.value)}
                       className={errors.salaryPerMonth ? "error" : ""}
                       placeholder="e.g. 45000"
+                    />
+                  </Field>
+                  <Field
+                    label="Gross Per Month"
+                    required
+                    error={errors.grossPerMonth}
+                  >
+                    <input
+                      type="number"
+                      value={form.grossPerMonth}
+                      onChange={(e) => set("grossPerMonth", e.target.value)}
+                      className={errors.grossPerMonth ? "error" : ""}
+                      placeholder="e.g. 50000"
                     />
                   </Field>
                 </div>
@@ -1731,6 +1749,16 @@ const AddEmployee = () => {
                   <span>🧾</span> Statutory & Compliance
                 </div>
                 <div className="ae-grid-2">
+                  <Field label="UAN Number">
+                    <input
+                      value={
+                        form.uanNumber === "not set yet" ? "" : form.uanNumber
+                      }
+                      onChange={(e) => set("uanNumber", e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </Field>
+
                   <div className="ae-bool-row">
                     <Field label="PF Applicable">
                       <select
@@ -1755,15 +1783,19 @@ const AddEmployee = () => {
                     )}
                   </div>
 
-                  <Field label="UAN Number">
-                    <input
-                      value={
-                        form.uanNumber === "not set yet" ? "" : form.uanNumber
-                      }
-                      onChange={(e) => set("uanNumber", e.target.value)}
-                      placeholder="Optional"
-                    />
-                  </Field>
+                  <div className="ae-bool-row">
+                    <Field label="PT Applicable">
+                      <select
+                        value={form.ptApplicable ? "yes" : "no"}
+                        onChange={(e) =>
+                          set("ptApplicable", e.target.value === "yes")
+                        }
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </Field>
+                  </div>
 
                   <div className="ae-bool-row">
                     <Field label="ESIC Applicable">
@@ -1791,20 +1823,6 @@ const AddEmployee = () => {
                     )}
                   </div>
 
-                  <div className="ae-bool-row">
-                    <Field label="PT Applicable">
-                      <select
-                        value={form.ptApplicable ? "yes" : "no"}
-                        onChange={(e) =>
-                          set("ptApplicable", e.target.value === "yes")
-                        }
-                      >
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                      </select>
-                    </Field>
-                  </div>
-
                   <Field label="TDS Regime">
                     <select
                       value={
@@ -1818,15 +1836,17 @@ const AddEmployee = () => {
                     </select>
                   </Field>
 
-                  <Field label="TDS DOC PROOF">
-                    <input
-                      value={
-                        form.tdsDocProof === "not set yet" ? "" : form.tdsDocProof
-                      }
-                      onChange={(e) => set("tdsDocProof", e.target.value)}
-                      placeholder="Optional"
-                    />
-                  </Field>
+                  {form.tdsRegime === "Old Tax Regime" && (
+                    <Field label="TDS DOC PROOF">
+                      <input
+                        value={
+                          form.tdsDocProof === "not set yet" ? "" : form.tdsDocProof
+                        }
+                        onChange={(e) => set("tdsDocProof", e.target.value)}
+                        placeholder="Optional"
+                      />
+                    </Field>
+                  )}
                 </div>
               </div>
             </div>

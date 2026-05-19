@@ -1157,13 +1157,25 @@ const EmployeeDetail = () => {
             </div>
             <div className="form-group">
               <label>Religion</label>
-              <input
-                type="text"
-                value={editWizardDraft.identity.religion}
+              <select
+                value={editWizardDraft.identity.religion === "not set yet" ? "" : editWizardDraft.identity.religion}
                 onChange={(e) =>
                   updateWizardValue("identity", "religion", e.target.value)
                 }
-              />
+              >
+                <option value="">Select religion</option>
+                {[
+                  "Hindu",
+                  "Muslim",
+                  "Christian",
+                  "Sikh",
+                  "Buddhist",
+                  "Jain",
+                  "Other",
+                ].map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Physically Handicapped</label>

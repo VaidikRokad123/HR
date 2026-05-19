@@ -220,7 +220,15 @@ function OfferLetterAdvancedEditor() {
       showNotice('Compile the PDF first');
       return;
     }
-    window.open(pdfUrl.split('?')[0], '_blank');
+    const cleanUrl = pdfUrl.split('?')[0];
+    const fileName = cleanUrl.split('/').pop() || 'document.pdf';
+    const link = document.createElement('a');
+    link.href = cleanUrl;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const placeholder = (name) => ['$', '{', name, '}'].join('');
