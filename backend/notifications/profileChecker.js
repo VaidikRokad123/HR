@@ -17,7 +17,7 @@ const isCompleteEmployeeProfile = (employee) => {
   }
 
   return Boolean(
-    employee.bankNameBranch && employee.accountNumber && employee.ifscCode,
+    employee.bankName && employee.accountNumber && employee.ifscCode,
   );
 };
 

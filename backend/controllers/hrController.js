@@ -511,7 +511,7 @@ export const addPayrollDetails = async (req, res) => {
     }
 
     const userId = req.params.id;
-    const { ctc, gross, pf, pt, esic, tds } = req.body;
+    const { ctcPerYear, grossPerMonth, salaryPerMonth, pf, pt, esic, tds } = req.body;
 
     const user = await UserModel.findById(userId);
     if (!user) {
@@ -531,8 +531,9 @@ export const addPayrollDetails = async (req, res) => {
     const newPayroll = new EmployeePayrollModel({
       userId,
       emp_code: user.emp_code,
-      ctc,
-      gross,
+      ctcPerYear,
+      grossPerMonth,
+      salaryPerMonth,
       pf: pf || false,
       pt: pt || false,
       esic: esic || false,
@@ -637,7 +638,7 @@ export const bulkUploadEmployees = async (req, res) => {
             emp_code: user.emp_code,
           });
         employee.set(payload);
-        if (payload.ctc || payload.gross)
+        if (payload.ctcPerYear || payload.grossPerMonth || payload.salaryPerMonth)
           appendPayrollHistoryIfChanged(
             employee,
             payload,

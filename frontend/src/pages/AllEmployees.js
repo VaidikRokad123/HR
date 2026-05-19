@@ -15,7 +15,7 @@ const getOfficialEmail = (employee) =>
   employee.professional?.workEmail ||
   "";
 const getBankName = (employee) =>
-  employee.bank?.bankNameBranch || employee.bank?.bankName || "";
+  employee.bank?.bankName || employee.bank?.bankNameBranch || "";
 const getAccountNumber = (employee) =>
   employee.bank?.accountNumber || employee.bank?.personalAccountNumber || "";
 const getIfscCode = (employee) =>
@@ -142,11 +142,16 @@ const AllEmployees = () => {
         ReportingManager: emp.professional?.reportingManager || "",
         OfficialEmail: getOfficialEmail(emp),
         BiometricId: emp.professional?.attendanceBiometricId || "",
+        NameAsPerAadhaar: emp.professional?.nameAsPerAadhaar || "",
         LinkedIn: emp.professional?.linkedinUrl || "",
         Probation: emp.professional?.inProbation ? "Yes" : "No",
+        ProbationDuration: emp.professional?.probationDuration || emp.professional?.probationMonths || "",
         EmploymentType: emp.professional?.employmentType || "",
         ConfirmationDate: emp.professional?.confirmationDate
           ? new Date(emp.professional.confirmationDate).toLocaleDateString()
+          : "",
+        ExitDate: emp.professional?.exitDate
+          ? new Date(emp.professional.exitDate).toLocaleDateString()
           : "",
         WorkLocation: emp.professional?.workLocation || "",
         WorkMobile: emp.professional?.workMobile || "",
@@ -154,6 +159,7 @@ const AllEmployees = () => {
         HighestQualification: emp.education?.highestQualification || "",
         GraduationYear: emp.education?.graduationYear || "",
         InstituteName: emp.education?.instituteName || "",
+        PreviousEmployer: emp.education?.previousEmployer || "",
         Reference1Name: emp.education?.references?.[0]?.name || "",
         Reference1Phone: emp.education?.references?.[0]?.phone || "",
         Reference1Email: emp.education?.references?.[0]?.email || "",
@@ -162,7 +168,7 @@ const AllEmployees = () => {
         Reference2Email: emp.education?.references?.[1]?.email || "",
         FatherName: emp.family?.fatherName || "",
         MotherName: emp.family?.motherName || "",
-        "Marital Status": emp.family?.maritalStatus || "Single",
+        "Marital Status": emp.family?.maritalStatus || emp.personal?.maritalStatus || "Single",
         SpouseName: emp.family?.spouseName || "",
         MarriageDate: emp.family?.marriageDate
           ? new Date(emp.family.marriageDate).toLocaleDateString()
@@ -176,29 +182,31 @@ const AllEmployees = () => {
         PermState: emp.address?.permanentAddress?.state || "",
         PermPincode: emp.address?.permanentAddress?.pincode || "",
         CompanyOpensBank: emp.bank?.companyOpensBank ? "Yes" : "No",
+        PermissionToUsePanAadhar: emp.bank?.permissionToUsePanAadhar ? "Yes" : "No",
         PANNumber: emp.bank?.panNumber || "",
         AadharNumber: emp.bank?.aadharNumber || "",
         PassportNumber: emp.bank?.passportNumber || "",
         DrivingLicence: emp.bank?.drivingLicence || "",
         VoterIdNumber: emp.bank?.voterIdNumber || "",
-        BankNameBranch: getBankName(emp),
+        BankName: getBankName(emp),
         Branch: emp.bank?.branch || "",
         AccountNumber: getAccountNumber(emp),
         IFSCCode: getIfscCode(emp),
         SalaryAccountNumber: emp.bank?.salaryAccountNumber || "",
         SalaryIFSC: emp.bank?.salaryIfsc || "",
         AccountHolderName: emp.payroll?.accountHolderName || emp.bank?.accountHolderName || "",
-        GrossSalary: emp.payroll?.gross || "",
-        CTC: emp.payroll?.ctc || "",
+        GrossSalary: emp.payroll?.grossPerMonth || "",
+        CTC: emp.payroll?.ctcPerYear || "",
+        SalaryPerMonth: emp.payroll?.salaryPerMonth || "",
         PFApplicable: emp.payroll?.pfApplicable ? "Yes" : "No",
         PFNumber: emp.payroll?.pfNumber || "",
         UANNumber: emp.payroll?.uanNumber || "",
         ESICApplicable: emp.payroll?.esicApplicable ? "Yes" : "No",
         ESICNumber: emp.payroll?.esicNumber || "",
         PTApplicable: emp.payroll?.ptApplicable ? "Yes" : "No",
-        PTNumber: emp.payroll?.ptNumber || "",
+        TDSApplicable: emp.payroll?.tdsApplicable ? "Yes" : "No",
         TDSRegime: emp.payroll?.tdsRegime || "",
-        Form12BB: emp.payroll?.form12bb || "",
+        TDSDOCProof: emp.payroll?.tdsDocProof || "",
         PrimaryContactName: emp.emergency?.emergencyContact1?.name || "",
         PrimaryContactRelationship:
           emp.emergency?.emergencyContact1?.relationship || "",

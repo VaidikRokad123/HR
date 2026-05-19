@@ -2,36 +2,59 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+import { state_arr, s_a } from "../utils/locationData";
 import "./EmployeeDetail.css";
 
-const departmentOptions = [
-  "Product & Delivery",
-  "Human Resources",
-  "Sales & marketing",
-  "Design",
-  "Engineering",
+const INDIAN_BANKS = [
+  "State Bank of India", "Punjab National Bank", "Bank of Baroda", "Bank of India", "Canara Bank",
+  "Union Bank of India", "Indian Bank", "Central Bank of India", "Indian Overseas Bank", "UCO Bank",
+  "Bank of Maharashtra", "Punjab & Sind Bank", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra Bank",
+  "IndusInd Bank", "Yes Bank", "IDFC First Bank", "Federal Bank", "South Indian Bank", "Bandhan Bank",
+  "RBL Bank", "City Union Bank", "Karur Vysya Bank", "Karnataka Bank", "Jammu & Kashmir Bank",
+  "CSB Bank", "DCB Bank", "Dhanlaxmi Bank", "Nainital Bank", "SBM Bank India", "Tamilnad Mercantile Bank",
+  "IDBI Bank", "Other"
 ];
 
-const designationOptions = [
-  "SR Quality Assurance Engineer",
-  "Team Lead - Software Development",
-  "Software Development Engineer - SDE 3",
-  "Software Development Engineer - SDE 2",
-  "Software Development Engineer - SDE 1",
-  "Software Development - Intern",
-  "Jr. Video Editor",
-  "Sr. Human Resource Executive",
-  "Product Manager",
-  "Team Lead",
-  "Jr Human Resource Executive",
-  "Sr. BDE",
-  "Sr. UI/UX",
-  "Intern-Graphics",
-  "Intern - UI/UX UI/UX Designer",
-  "Quality Assurance Engineer",
-  "Quality Assurance - Intern",
-  "JR Quality Assurance Engineer",
+const departmentOptions = [
+  "Engineering",
+  "Product & Delivery",
+  "Human Resources",
+  "Sales & Marketing",
+  "Design",
 ];
+
+const designationByDepartment = {
+  Engineering: [
+    "Software Development Engineer - SDE 1",
+    "Software Development Engineer - SDE 2",
+    "Software Development Engineer - SDE 3",
+    "Software Development - Intern",
+    "Team Lead - Software Development",
+    "JR Quality Assurance Engineer",
+    "Quality Assurance Engineer",
+    "SR Quality Assurance Engineer",
+    "Quality Assurance - Intern",
+  ],
+  "Product & Delivery": [
+    "Product Manager",
+    "Team Lead",
+  ],
+  "Human Resources": [
+    "Jr Human Resource Executive",
+    "Sr. Human Resource Executive",
+  ],
+  "Sales & Marketing": [
+    "Sr. BDE",
+  ],
+  Design: [
+    "Sr. UI/UX",
+    "Intern - UI/UX UI/UX Designer",
+    "Intern-Graphics",
+    "Jr. Video Editor",
+  ],
+};
+
+const designationOptions = Object.values(designationByDepartment).flat();
 
 const employmentTypeOptions = [
   "Temporary",
@@ -117,7 +140,7 @@ const buildEmployeeUpdatePayload = (module, data = {}) => {
     case "bank":
       return {
         ...data,
-        bankNameBranch: data.bankNameBranch || data.bankName,
+        bankName: data.bankName || data.bankNameBranch,
         accountNumber: data.accountNumber || data.personalAccountNumber,
         ifscCode: data.ifscCode || data.personalIfsc,
       };
@@ -243,6 +266,7 @@ const buildEditDraft = (employee = {}) => {
   const professional = employee.professional || {};
   const bank = employee.bank || {};
   const payroll = employee.payroll || {};
+  const education = employee.education || {};
 
   return {
     identity: {
@@ -291,22 +315,29 @@ const buildEditDraft = (employee = {}) => {
       voterIdNumber: bank.voterIdNumber || "",
     },
     education: {
-      highestQualification: personal.highestQualification || "",
-      graduationYear: personal.graduationYear || "",
-      instituteName: personal.instituteName || "",
+      highestQualification: education.highestQualification || personal.highestQualification || "",
+      graduationYear: education.graduationYear || personal.graduationYear || "",
+      instituteName: education.instituteName || personal.instituteName || "",
       previousEmployer: personal.previousEmployer || "",
       references:
-        family.references?.length > 0
-          ? family.references.map((reference) => ({
+        education.references?.length > 0
+          ? education.references.map((reference) => ({
               name: reference?.name || "",
               phone: reference?.phone || "",
               email: reference?.email || "",
             }))
-          : [emptyReference()],
+          : family.references?.length > 0
+            ? family.references.map((reference) => ({
+                name: reference?.name || "",
+                phone: reference?.phone || "",
+                email: reference?.email || "",
+              }))
+            : [emptyReference()],
     },
     employment: {
       emp_code: employee.user?.emp_code || employee.emp_code || "",
       dateJoining: toDateInputValue(professional.dateJoining),
+      exitDate: toDateInputValue(professional.exitDate),
       employmentType: professional.employmentType || "",
       probationMonths: professional.probationMonths ?? "",
       confirmationDate: toDateInputValue(professional.confirmationDate),
@@ -324,9 +355,10 @@ const buildEditDraft = (employee = {}) => {
       probationDuration: professional.probationDuration || "",
     },
     payroll: {
-      ctc: payroll.ctc || "",
-      gross: payroll.gross || "",
-      bankNameBranch: bank.bankNameBranch || bank.bankName || "",
+      ctcPerYear: payroll.ctcPerYear || "",
+      grossPerMonth: payroll.grossPerMonth || "",
+      salaryPerMonth: payroll.salaryPerMonth || "",
+      bankName: bank.bankName || bank.bankNameBranch || "",
       branch: bank.branch || "",
       accountHolderName: bank.accountHolderName || "",
       accountNumber: bank.accountNumber || bank.personalAccountNumber || "",
@@ -341,9 +373,9 @@ const buildEditDraft = (employee = {}) => {
       esicApplicable: Boolean(payroll.esicApplicable ?? payroll.esic),
       esicNumber: payroll.esicNumber || "",
       ptApplicable: Boolean(payroll.ptApplicable ?? payroll.pt),
-      ptNumber: payroll.ptNumber || "",
+      tdsApplicable: Boolean(payroll.tdsApplicable ?? payroll.tds),
       tdsRegime: payroll.tdsRegime || "",
-      form12bb: payroll.form12bb || "",
+      tdsDocProof: payroll.tdsDocProof || "",
     },
     documents: {
       personal_identity: null,
@@ -420,17 +452,12 @@ const getStepModules = (stepId, draft) => {
     case "education":
       return [
         {
-          module: "personal",
+          module: "education",
           data: {
             highestQualification: draft.education.highestQualification,
             graduationYear: draft.education.graduationYear,
             instituteName: draft.education.instituteName,
             previousEmployer: draft.education.previousEmployer,
-          },
-        },
-        {
-          module: "family",
-          data: {
             references: draft.education.references,
           },
         },
@@ -442,6 +469,7 @@ const getStepModules = (stepId, draft) => {
           data: {
             emp_code: draft.employment.emp_code,
             dateJoined: draft.employment.dateJoining,
+            exitDate: draft.employment.exitDate,
             employmentType: draft.employment.employmentType,
             probationMonths: draft.employment.probationMonths,
             confirmationDate: draft.employment.confirmationDate,
@@ -467,7 +495,7 @@ const getStepModules = (stepId, draft) => {
         {
           module: "bank",
           data: {
-            bankNameBranch: draft.payroll.bankNameBranch,
+            bankName: draft.payroll.bankName,
             branch: draft.payroll.branch,
             accountHolderName: draft.payroll.accountHolderName,
             accountNumber: draft.payroll.accountNumber,
@@ -481,17 +509,18 @@ const getStepModules = (stepId, draft) => {
         {
           module: "payroll",
           data: {
-            ctc: draft.payroll.ctc,
-            gross: draft.payroll.gross,
+            ctcPerYear: draft.payroll.ctcPerYear,
+            grossPerMonth: draft.payroll.grossPerMonth,
+            salaryPerMonth: draft.payroll.salaryPerMonth,
             pfApplicable: draft.payroll.pfApplicable,
             pfNumber: draft.payroll.pfNumber,
             uanNumber: draft.payroll.uanNumber,
             esicApplicable: draft.payroll.esicApplicable,
             esicNumber: draft.payroll.esicNumber,
             ptApplicable: draft.payroll.ptApplicable,
-            ptNumber: draft.payroll.ptNumber,
+            tdsApplicable: draft.payroll.tdsApplicable,
             tdsRegime: draft.payroll.tdsRegime,
-            form12bb: draft.payroll.form12bb,
+            tdsDocProof: draft.payroll.tdsDocProof,
           },
         },
       ];
@@ -1276,8 +1305,7 @@ const EmployeeDetail = () => {
               </div>
               <div className="form-group">
                 <label>City</label>
-                <input
-                  type="text"
+                <select
                   value={editWizardDraft.contact.currentAddress.city}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -1296,12 +1324,22 @@ const EmployeeDetail = () => {
                       );
                     }
                   }}
-                />
+                >
+                  <option value="">Select city</option>
+                  {(() => {
+                    const idx = state_arr.indexOf(editWizardDraft.contact.currentAddress.state) + 1;
+                    const cities = idx > 0 && s_a[idx] ? s_a[idx].split("|").map((c) => c.trim()).filter(Boolean) : [];
+                    return cities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ));
+                  })()}
+                </select>
               </div>
               <div className="form-group">
                 <label>State</label>
-                <input
-                  type="text"
+                <select
                   value={editWizardDraft.contact.currentAddress.state}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -1311,6 +1349,12 @@ const EmployeeDetail = () => {
                       "state",
                       value,
                     );
+                    updateWizardNestedObjectValue(
+                      "contact",
+                      "currentAddress",
+                      "city",
+                      "",
+                    );
                     if (editWizardDraft.contact.sameAsCurrent) {
                       updateWizardNestedObjectValue(
                         "contact",
@@ -1318,9 +1362,22 @@ const EmployeeDetail = () => {
                         "state",
                         value,
                       );
+                      updateWizardNestedObjectValue(
+                        "contact",
+                        "permanentAddress",
+                        "city",
+                        "",
+                      );
                     }
                   }}
-                />
+                >
+                  <option value="">Select state</option>
+                  {state_arr.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label>Pincode</label>
@@ -1393,8 +1450,7 @@ const EmployeeDetail = () => {
                   </div>
                   <div className="form-group">
                     <label>City</label>
-                    <input
-                      type="text"
+                    <select
                       value={editWizardDraft.contact.permanentAddress.city}
                       onChange={(e) =>
                         updateWizardNestedObjectValue(
@@ -1404,22 +1460,46 @@ const EmployeeDetail = () => {
                           e.target.value,
                         )
                       }
-                    />
+                    >
+                      <option value="">Select city</option>
+                      {(() => {
+                        const idx = state_arr.indexOf(editWizardDraft.contact.permanentAddress.state) + 1;
+                        const cities = idx > 0 && s_a[idx] ? s_a[idx].split("|").map((c) => c.trim()).filter(Boolean) : [];
+                        return cities.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>State</label>
-                    <input
-                      type="text"
+                    <select
                       value={editWizardDraft.contact.permanentAddress.state}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value;
                         updateWizardNestedObjectValue(
                           "contact",
                           "permanentAddress",
                           "state",
-                          e.target.value,
-                        )
-                      }
-                    />
+                          value,
+                        );
+                        updateWizardNestedObjectValue(
+                          "contact",
+                          "permanentAddress",
+                          "city",
+                          "",
+                        );
+                      }}
+                    >
+                      <option value="">Select state</option>
+                      {state_arr.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
                     <label>Pincode</label>
@@ -1749,6 +1829,16 @@ const EmployeeDetail = () => {
               />
             </div>
             <div className="form-group">
+              <label>Exit Date</label>
+              <input
+                type="date"
+                value={editWizardDraft.employment.exitDate}
+                onChange={(e) =>
+                  updateWizardValue("employment", "exitDate", e.target.value)
+                }
+              />
+            </div>
+            <div className="form-group">
               <label>Employment Type</label>
               <select
                 value={editWizardDraft.employment.employmentType}
@@ -1825,23 +1915,31 @@ const EmployeeDetail = () => {
                 }
               >
                 <option value="">Select designation</option>
-                {(referenceOptions.designations || []).map((designation) => (
-                  <option key={designation} value={designation}>
-                    {designation}
-                  </option>
-                ))}
+                {(() => {
+                  const dept = editWizardDraft.employment.department;
+                  const deptKey = dept ? Object.keys(designationByDepartment).find(k => k.toLowerCase() === dept.toLowerCase()) : null;
+                  const opts = deptKey
+                    ? designationByDepartment[deptKey]
+                    : (referenceOptions.designations || designationOptions);
+                  return opts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ));
+                })()}
               </select>
             </div>
             <div className="form-group">
               <label>Department</label>
               <select
                 value={editWizardDraft.employment.department}
-                onChange={(e) =>
-                  updateWizardValue("employment", "department", e.target.value)
-                }
+                onChange={(e) => {
+                  updateWizardValue("employment", "department", e.target.value);
+                  updateWizardValue("employment", "designation", "");
+                }}
               >
                 <option value="">Select department</option>
-                {(referenceOptions.departments || []).map((department) => (
+                {(referenceOptions.departments || departmentOptions).map((department) => (
                   <option key={department} value={department}>
                     {department}
                   </option>
@@ -1971,22 +2069,32 @@ const EmployeeDetail = () => {
           <>
             <div className="grid-2">
               <div className="form-group">
-                <label>CTC</label>
+                <label>CTC Per Year</label>
                 <input
                   type="number"
-                  value={editWizardDraft.payroll.ctc}
+                  value={editWizardDraft.payroll.ctcPerYear}
                   onChange={(e) =>
-                    updateWizardValue("payroll", "ctc", e.target.value)
+                    updateWizardValue("payroll", "ctcPerYear", e.target.value)
                   }
                 />
               </div>
               <div className="form-group">
-                <label>Gross Salary</label>
+                <label>Gross Per Month</label>
                 <input
                   type="number"
-                  value={editWizardDraft.payroll.gross}
+                  value={editWizardDraft.payroll.grossPerMonth}
                   onChange={(e) =>
-                    updateWizardValue("payroll", "gross", e.target.value)
+                    updateWizardValue("payroll", "grossPerMonth", e.target.value)
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Salary Per Month</label>
+                <input
+                  type="number"
+                  value={editWizardDraft.payroll.salaryPerMonth}
+                  onChange={(e) =>
+                    updateWizardValue("payroll", "salaryPerMonth", e.target.value)
                   }
                 />
               </div>
@@ -2023,14 +2131,34 @@ const EmployeeDetail = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Bank Name & Branch</label>
-                <input
-                  type="text"
-                  value={editWizardDraft.payroll.bankNameBranch}
-                  onChange={(e) =>
-                    updateWizardValue("payroll", "bankNameBranch", e.target.value)
-                  }
-                />
+                <label>Bank Name</label>
+                <div>
+                  <select
+                    value={INDIAN_BANKS.includes(editWizardDraft.payroll.bankName) ? editWizardDraft.payroll.bankName : (editWizardDraft.payroll.bankName ? "Other" : "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Other") updateWizardValue("payroll", "bankName", " ");
+                      else updateWizardValue("payroll", "bankName", val);
+                    }}
+                  >
+                    <option value="">Select Bank</option>
+                    {INDIAN_BANKS.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                    <option value="Other">Other</option>
+                  </select>
+                  {(!INDIAN_BANKS.includes(editWizardDraft.payroll.bankName) && editWizardDraft.payroll.bankName !== "") && (
+                    <input
+                      style={{ marginTop: 8 }}
+                      type="text"
+                      value={editWizardDraft.payroll.bankName.trim()}
+                      onChange={(e) =>
+                        updateWizardValue("payroll", "bankName", e.target.value || " ")
+                      }
+                      placeholder="Enter custom bank name"
+                    />
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label>Branch</label>
@@ -2175,14 +2303,20 @@ const EmployeeDetail = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label>PT Number</label>
-                <input
-                  type="text"
-                  value={editWizardDraft.payroll.ptNumber}
+                <label>TDS Applicable</label>
+                <select
+                  value={editWizardDraft.payroll.tdsApplicable ? "yes" : "no"}
                   onChange={(e) =>
-                    updateWizardValue("payroll", "ptNumber", e.target.value)
+                    updateWizardValue(
+                      "payroll",
+                      "tdsApplicable",
+                      e.target.value === "yes",
+                    )
                   }
-                />
+                >
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>TDS Regime</label>
@@ -2198,12 +2332,12 @@ const EmployeeDetail = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Form 12BB</label>
+                <label>TDS DOC PROOF</label>
                 <input
                   type="text"
-                  value={editWizardDraft.payroll.form12bb}
+                  value={editWizardDraft.payroll.tdsDocProof}
                   onChange={(e) =>
-                    updateWizardValue("payroll", "form12bb", e.target.value)
+                    updateWizardValue("payroll", "tdsDocProof", e.target.value)
                   }
                 />
               </div>

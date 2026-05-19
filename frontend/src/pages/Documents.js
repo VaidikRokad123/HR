@@ -17,12 +17,14 @@ const fieldLabels = {
   companyName: "Company Name",
   signatoryName: "Signatory Name",
   signatoryTitle: "Signatory Title",
+  currentSalary: "Current CTC",
+  revisedSalaryDate: "Revised Salary Effective Date",
 };
 
 const getDesignation = (employee) =>
   employee.professional?.designation || employee.professional?.jobTitle || "";
 
-const initialForm = {
+const initialOfferForm = {
   name: "",
   gender: "",
   internType: "internship",
@@ -37,6 +39,19 @@ const initialForm = {
   signatoryName: "HARDIKKUMAR VINZAVA",
   signatoryTitle: "DIRECTOR",
 };
+
+const initialAppraisalForm = {
+  name: "",
+  gender: "",
+  role: "",
+  currentSalary: "",
+  revisedSalaryDate: "",
+  companyName: "Saeculum Solutions Pvt. Ltd.",
+  signatoryName: "HARDIKKUMAR VINZAVA",
+  signatoryTitle: "DIRECTOR",
+};
+
+const initialForm = { ...initialOfferForm, ...initialAppraisalForm };
 
 function Documents() {
   const navigate = useNavigate();
@@ -89,9 +104,11 @@ function Documents() {
     try {
       setError("");
       setSelectedEmployeeId(employeeId);
-      const response = await axios.get(
-        `/documents/offer-letter/${employeeId}/inspect`,
-      );
+      const endpoint =
+        selectedType === "appraisal-letter"
+          ? `/documents/appraisal-letter/${employeeId}/inspect`
+          : `/documents/offer-letter/${employeeId}/inspect`;
+      const response = await axios.get(endpoint);
       setForm({ ...initialForm, ...response.data.values });
       setMissingFields(response.data.missingFields || []);
       setStep(3);
@@ -112,10 +129,11 @@ function Documents() {
     try {
       setPreparing(true);
       setError("");
-      const response = await axios.post(
-        `/documents/offer-letter/${selectedEmployeeId}/prepare`,
-        form,
-      );
+      const endpoint =
+        selectedType === "appraisal-letter"
+          ? `/documents/appraisal-letter/${selectedEmployeeId}/prepare`
+          : `/documents/offer-letter/${selectedEmployeeId}/prepare`;
+      const response = await axios.post(endpoint, form);
       navigate("/documents/editor", {
         state: {
           pages: response.data.data.pages,
@@ -255,7 +273,11 @@ function Documents() {
 
       {step === 3 && (
         <div className="card">
-          <h3>Complete Offer Letter Details</h3>
+          <h3>
+            {selectedType === "appraisal-letter"
+              ? "Complete Appraisal Letter Details"
+              : "Complete Offer Letter Details"}
+          </h3>
           {selectedEmployee && (
             <div className="selected-employee-strip">
               <strong>
@@ -296,89 +318,121 @@ function Documents() {
               </select>
             </div>
             <div className="form-group">
-              <label>Job Type</label>
-              <select
-                value={form.internType}
-                onChange={(event) =>
-                  updateField("internType", event.target.value)
-                }
-              >
-                <option value="internship">Internship</option>
-                <option value="part time">Part Time</option>
-                <option value="full time">Full Time</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Duration Type</label>
-              <select
-                value={form.durationType}
-                onChange={(event) =>
-                  updateField("durationType", event.target.value)
-                }
-              >
-                <option value="month">Month</option>
-                <option value="year">Year</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Duration</label>
-              <input
-                type="number"
-                min="1"
-                value={form.duration}
-                onChange={(event) =>
-                  updateField("duration", event.target.value)
-                }
-              />
-            </div>
-            <div className="form-group">
-              <label>Role</label>
+              <label>Role / Designation</label>
               <input
                 value={form.role}
                 onChange={(event) => updateField("role", event.target.value)}
               />
             </div>
-            <div className="form-group">
-              <label>Start Date</label>
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={(event) =>
-                  updateField("startDate", event.target.value)
-                }
-              />
-            </div>
-            <div className="form-group">
-              <label>End Date</label>
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={(event) => updateField("endDate", event.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label>Salary Type</label>
-              <select
-                value={form.salaryType}
-                onChange={(event) =>
-                  updateField("salaryType", event.target.value)
-                }
-              >
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-              </select>
-            </div>
-            {form.salaryType === "paid" && (
-              <div className="form-group">
-                <label>Salary Amount</label>
-                <input
-                  value={form.salaryAmount}
-                  onChange={(event) =>
-                    updateField("salaryAmount", event.target.value)
-                  }
-                />
-              </div>
+
+            {selectedType === "offer-letter" && (
+              <>
+                <div className="form-group">
+                  <label>Job Type</label>
+                  <select
+                    value={form.internType}
+                    onChange={(event) =>
+                      updateField("internType", event.target.value)
+                    }
+                  >
+                    <option value="internship">Internship</option>
+                    <option value="part time">Part Time</option>
+                    <option value="full time">Full Time</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Duration Type</label>
+                  <select
+                    value={form.durationType}
+                    onChange={(event) =>
+                      updateField("durationType", event.target.value)
+                    }
+                  >
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Duration</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.duration}
+                    onChange={(event) =>
+                      updateField("duration", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(event) =>
+                      updateField("startDate", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(event) =>
+                      updateField("endDate", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Salary Type</label>
+                  <select
+                    value={form.salaryType}
+                    onChange={(event) =>
+                      updateField("salaryType", event.target.value)
+                    }
+                  >
+                    <option value="paid">Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                  </select>
+                </div>
+                {form.salaryType === "paid" && (
+                  <div className="form-group">
+                    <label>Salary Amount</label>
+                    <input
+                      value={form.salaryAmount}
+                      onChange={(event) =>
+                        updateField("salaryAmount", event.target.value)
+                      }
+                    />
+                  </div>
+                )}
+              </>
             )}
+
+            {selectedType === "appraisal-letter" && (
+              <>
+                <div className="form-group">
+                  <label>Current CTC</label>
+                  <input
+                    value={form.currentSalary}
+                    onChange={(event) =>
+                      updateField("currentSalary", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Revised Salary Effective Date</label>
+                  <input
+                    type="date"
+                    value={form.revisedSalaryDate}
+                    onChange={(event) =>
+                      updateField("revisedSalaryDate", event.target.value)
+                    }
+                  />
+                </div>
+              </>
+            )}
+
             <div className="form-group">
               <label>Company Name</label>
               <input

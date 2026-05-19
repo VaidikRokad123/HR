@@ -77,10 +77,11 @@ const computePendingSections = (payload = {}) => {
 
   if (
     [
-      payload.gross,
-      payload.ctc,
+      payload.grossPerMonth,
+      payload.ctcPerYear,
+      payload.salaryPerMonth,
       payload.accountHolderName,
-      payload.bankNameBranch,
+      payload.bankName,
       payload.accountNumber,
       payload.ifscCode,
     ].some(isBlank)

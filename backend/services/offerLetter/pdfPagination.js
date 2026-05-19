@@ -1,4 +1,7 @@
+import { CONTENT_MAX_HEIGHT_MM } from './pdfLayout.js';
+
 export function repaginateForFooterSafety(pages, metadata, estimateBlockHeightMm, replaceVariables = (value) => value) {
+  const usableHeight = CONTENT_MAX_HEIGHT_MM;
   const repaginated = [];
   let pageNumber = 1;
 
@@ -7,14 +10,12 @@ export function repaginateForFooterSafety(pages, metadata, estimateBlockHeightMm
     let currentHeight = 0;
 
     for (const para of page.paragraphs || []) {
-      const pageUsableHeight = 297 - 30 - 28;
       const queue = [para];
 
       while (queue.length > 0) {
         const block = queue.shift();
         const height = estimateBlockHeightMm(block, metadata, replaceVariables);
-        const reserve = block.type === 'paragraph' ? 4 : 0;
-        const willOverflow = currentHeight + height > pageUsableHeight - reserve;
+        const willOverflow = currentHeight + height > usableHeight;
 
         if (!willOverflow) {
           currentParagraphs.push(block);
@@ -41,3 +42,4 @@ export function repaginateForFooterSafety(pages, metadata, estimateBlockHeightMm
 
   return repaginated;
 }
+

@@ -20,6 +20,16 @@ import axios from "axios";
 import { state_arr, s_a } from "../utils/locationData";
 import "./AddEmployee.css";
 
+const INDIAN_BANKS = [
+  "State Bank of India", "Punjab National Bank", "Bank of Baroda", "Bank of India", "Canara Bank",
+  "Union Bank of India", "Indian Bank", "Central Bank of India", "Indian Overseas Bank", "UCO Bank",
+  "Bank of Maharashtra", "Punjab & Sind Bank", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra Bank",
+  "IndusInd Bank", "Yes Bank", "IDFC First Bank", "Federal Bank", "South Indian Bank", "Bandhan Bank",
+  "RBL Bank", "City Union Bank", "Karur Vysya Bank", "Karnataka Bank", "Jammu & Kashmir Bank",
+  "CSB Bank", "DCB Bank", "Dhanlaxmi Bank", "Nainital Bank", "SBM Bank India", "Tamilnad Mercantile Bank",
+  "IDBI Bank", "Other"
+];
+
 /* ─── constants ─────────────────────────────────────────────── */
 const DRAFT_KEY = "hr_emp_draft_id";
 const STEPS = [
@@ -31,6 +41,47 @@ const STEPS = [
   { label: "Payroll", icon: "💰", key: "payroll", skippable: true },
   { label: "Documents", icon: "📄", key: "documents", skippable: true },
 ];
+
+const departmentOptions = [
+  "Engineering",
+  "Product & Delivery",
+  "Human Resources",
+  "Sales & Marketing",
+  "Design",
+];
+
+const designationByDepartment = {
+  Engineering: [
+    "Software Development Engineer - SDE 1",
+    "Software Development Engineer - SDE 2",
+    "Software Development Engineer - SDE 3",
+    "Software Development - Intern",
+    "Team Lead - Software Development",
+    "JR Quality Assurance Engineer",
+    "Quality Assurance Engineer",
+    "SR Quality Assurance Engineer",
+    "Quality Assurance - Intern",
+  ],
+  "Product & Delivery": [
+    "Product Manager",
+    "Team Lead",
+  ],
+  "Human Resources": [
+    "Jr Human Resource Executive",
+    "Sr. Human Resource Executive",
+  ],
+  "Sales & Marketing": [
+    "Sr. BDE",
+  ],
+  Design: [
+    "Sr. UI/UX",
+    "Intern - UI/UX UI/UX Designer",
+    "Intern-Graphics",
+    "Jr. Video Editor",
+  ],
+};
+
+const designationOptions = Object.values(designationByDepartment).flat();
 
 const EMPTY_EMERGENCY = { name: "", phone: "", relationship: "" };
 const EMPTY_REFERENCE = { name: "", phone: "", email: "" };
@@ -74,10 +125,11 @@ const INITIAL = {
   officialEmail: "",
   workMobile: "",
   laptopAssigned: "",
-  gross: "",
-  ctc: "",
+  grossPerMonth: "",
+  ctcPerYear: "",
+  salaryPerMonth: "",
   accountHolderName: "",
-  bankNameBranch: "",
+  bankName: "",
   accountNumber: "",
   ifscCode: "",
   pfApplicable: false,
@@ -86,9 +138,8 @@ const INITIAL = {
   esicApplicable: false,
   esicNumber: "",
   ptApplicable: false,
-  ptNumber: "",
   tdsRegime: "",
-  form12bb: "",
+  tdsDocProof: "",
 };
 
 /* ─── helpers (defined OUTSIDE component – safe for hooks) ───── */
@@ -346,13 +397,14 @@ const AddEmployee = () => {
                 : professional.laptopAssigned || "",
             aadharNumber: bank.aadharNumber || "",
             panNumber: bank.panNumber || "",
-            bankNameBranch: bank.bankNameBranch || bank.bankName || "",
+            bankName: bank.bankName || bank.bankNameBranch || "",
             accountHolderName: bank.accountHolderName || "",
             accountNumber:
               bank.accountNumber || bank.personalAccountNumber || "",
             ifscCode: bank.ifscCode || bank.personalIfsc || "",
-            gross: payroll.gross || "",
-            ctc: payroll.ctc || "",
+            grossPerMonth: payroll.grossPerMonth || "",
+            ctcPerYear: payroll.ctcPerYear || "",
+            salaryPerMonth: payroll.salaryPerMonth || "",
             pfApplicable: payroll.pfApplicable ?? payroll.pf ?? false,
             pfNumber:
               payroll.pfNumber === "not set yet" ? "" : payroll.pfNumber || "",
@@ -366,14 +418,12 @@ const AddEmployee = () => {
                 ? ""
                 : payroll.esicNumber || "",
             ptApplicable: payroll.ptApplicable ?? payroll.pt ?? false,
-            ptNumber:
-              payroll.ptNumber === "not set yet" ? "" : payroll.ptNumber || "",
             tdsRegime:
               payroll.tdsRegime === "not set yet"
                 ? ""
                 : payroll.tdsRegime || "",
-            form12bb:
-              payroll.form12bb === "not set yet" ? "" : payroll.form12bb || "",
+            tdsDocProof:
+              payroll.tdsDocProof === "not set yet" ? "" : payroll.tdsDocProof || "",
           });
           if (primaryEmergency) {
             setEmergency([
@@ -551,10 +601,11 @@ const AddEmployee = () => {
       if (!form.officialEmail) e.officialEmail = "Required";
     }
     if (forStep === 5) {
-      if (!form.gross) e.gross = "Required";
-      if (!form.ctc) e.ctc = "Required";
+      if (!form.grossPerMonth) e.grossPerMonth = "Required";
+      if (!form.ctcPerYear) e.ctcPerYear = "Required";
+      if (!form.salaryPerMonth) e.salaryPerMonth = "Required";
       if (!form.accountHolderName) e.accountHolderName = "Required";
-      if (!form.bankNameBranch) e.bankNameBranch = "Required";
+      if (!form.bankName) e.bankName = "Required";
       if (!form.accountNumber) e.accountNumber = "Required";
       if (!form.ifscCode) e.ifscCode = "Required";
     }
@@ -623,10 +674,11 @@ const AddEmployee = () => {
       if (!form.officialEmail) e.officialEmail = true;
     }
     if (forStep === 5) {
-      if (!form.gross) e.gross = true;
-      if (!form.ctc) e.ctc = true;
+      if (!form.grossPerMonth) e.grossPerMonth = true;
+      if (!form.ctcPerYear) e.ctcPerYear = true;
+      if (!form.salaryPerMonth) e.salaryPerMonth = true;
       if (!form.accountHolderName) e.accountHolderName = true;
-      if (!form.bankNameBranch) e.bankNameBranch = true;
+      if (!form.bankName) e.bankName = true;
       if (!form.accountNumber) e.accountNumber = true;
       if (!form.ifscCode) e.ifscCode = true;
     }
@@ -757,9 +809,8 @@ const AddEmployee = () => {
         "pfNumber",
         "uanNumber",
         "esicNumber",
-        "ptNumber",
         "tdsRegime",
-        "form12bb",
+        "tdsDocProof",
       ];
       const payload =
         pruneEmptyValues({
@@ -1467,20 +1518,30 @@ const AddEmployee = () => {
                       className={errors.designation ? "error" : ""}
                     >
                       <option value="">Select designation</option>
-                      {(refData?.designations || []).map((d) => (
-                        <option key={d}>{d}</option>
-                      ))}
+                      {(() => {
+                        const dept = form.department;
+                        const deptKey = dept ? Object.keys(designationByDepartment).find(k => k.toLowerCase() === dept.toLowerCase()) : null;
+                        const opts = deptKey
+                          ? designationByDepartment[deptKey]
+                          : (refData?.designations || designationOptions);
+                        return opts.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ));
+                      })()}
                     </select>
                   </Field>
                   <Field label="Department" required error={errors.department}>
                     <select
                       value={form.department}
-                      onChange={(e) => set("department", e.target.value)}
+                      onChange={(e) => {
+                        set("department", e.target.value);
+                        set("designation", "");
+                      }}
                       className={errors.department ? "error" : ""}
                     >
                       <option value="">Select department</option>
-                      {(refData?.departments || []).map((d) => (
-                        <option key={d}>{d}</option>
+                      {(refData?.departments || departmentOptions).map((d) => (
+                        <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
                   </Field>
@@ -1561,25 +1622,34 @@ const AddEmployee = () => {
                 </div>
                 <div className="ae-grid-2">
                   <Field
-                    label="Gross Salary (monthly)"
+                    label="Gross Per Month"
                     required
-                    error={errors.gross}
+                    error={errors.grossPerMonth}
                   >
                     <input
                       type="number"
-                      value={form.gross}
-                      onChange={(e) => set("gross", e.target.value)}
-                      className={errors.gross ? "error" : ""}
+                      value={form.grossPerMonth}
+                      onChange={(e) => set("grossPerMonth", e.target.value)}
+                      className={errors.grossPerMonth ? "error" : ""}
                       placeholder="e.g. 50000"
                     />
                   </Field>
-                  <Field label="CTC (annual)" required error={errors.ctc}>
+                  <Field label="CTC Per Year" required error={errors.ctcPerYear}>
                     <input
                       type="number"
-                      value={form.ctc}
-                      onChange={(e) => set("ctc", e.target.value)}
-                      className={errors.ctc ? "error" : ""}
+                      value={form.ctcPerYear}
+                      onChange={(e) => set("ctcPerYear", e.target.value)}
+                      className={errors.ctcPerYear ? "error" : ""}
                       placeholder="e.g. 600000"
+                    />
+                  </Field>
+                  <Field label="Salary Per Month" required error={errors.salaryPerMonth}>
+                    <input
+                      type="number"
+                      value={form.salaryPerMonth}
+                      onChange={(e) => set("salaryPerMonth", e.target.value)}
+                      className={errors.salaryPerMonth ? "error" : ""}
+                      placeholder="e.g. 45000"
                     />
                   </Field>
                 </div>
@@ -1602,16 +1672,34 @@ const AddEmployee = () => {
                     />
                   </Field>
                   <Field
-                    label="Bank Name & Branch"
+                    label="Bank Name"
                     required
-                    error={errors.bankNameBranch}
+                    error={errors.bankName}
                   >
-                    <input
-                      value={form.bankNameBranch}
-                      onChange={(e) => set("bankNameBranch", e.target.value)}
-                      className={errors.bankNameBranch ? "error" : ""}
-                      placeholder="HDFC Bank, Ahmedabad"
-                    />
+                    <select
+                      value={INDIAN_BANKS.includes(form.bankName) ? form.bankName : (form.bankName ? "Other" : "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Other") set("bankName", " ");
+                        else set("bankName", val);
+                      }}
+                      className={errors.bankName ? "error" : ""}
+                    >
+                      <option value="">Select Bank</option>
+                      {INDIAN_BANKS.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
+                    {(!INDIAN_BANKS.includes(form.bankName) && form.bankName !== "") && (
+                      <input
+                        style={{ marginTop: 8 }}
+                        value={form.bankName.trim()}
+                        onChange={(e) => set("bankName", e.target.value || " ")}
+                        placeholder="Enter custom bank name"
+                        className={errors.bankName ? "error" : ""}
+                      />
+                    )}
                   </Field>
                   <Field
                     label="Account Number"
@@ -1715,16 +1803,6 @@ const AddEmployee = () => {
                         <option value="yes">Yes</option>
                       </select>
                     </Field>
-                    {form.ptApplicable && (
-                      <Field label="PT Number">
-                        <input
-                          value={
-                            form.ptNumber === "not set yet" ? "" : form.ptNumber
-                          }
-                          onChange={(e) => set("ptNumber", e.target.value)}
-                        />
-                      </Field>
-                    )}
                   </div>
 
                   <Field label="TDS Regime">
@@ -1740,12 +1818,12 @@ const AddEmployee = () => {
                     </select>
                   </Field>
 
-                  <Field label="Form 12BB Declarations">
+                  <Field label="TDS DOC PROOF">
                     <input
                       value={
-                        form.form12bb === "not set yet" ? "" : form.form12bb
+                        form.tdsDocProof === "not set yet" ? "" : form.tdsDocProof
                       }
-                      onChange={(e) => set("form12bb", e.target.value)}
+                      onChange={(e) => set("tdsDocProof", e.target.value)}
                       placeholder="Optional"
                     />
                   </Field>

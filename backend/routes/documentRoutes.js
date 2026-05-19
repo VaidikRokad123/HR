@@ -8,6 +8,8 @@ import {
   getDocumentTypes,
   inspectOfferLetter,
   prepareOfferLetter,
+  inspectAppraisalLetter,
+  prepareAppraisalLetter,
   uploadEmployeeDocument,
   getEmployeeDocuments
 } from "../controllers/documentController.js";
@@ -33,6 +35,8 @@ router.get("/types", getDocumentTypes);
 router.get("/draft", getDocumentDraft);
 router.get("/offer-letter/:userId/inspect", inspectOfferLetter);
 router.post("/offer-letter/:userId/prepare", prepareOfferLetter);
+router.get("/appraisal-letter/:userId/inspect", inspectAppraisalLetter);
+router.post("/appraisal-letter/:userId/prepare", prepareAppraisalLetter);
 router.post("/compile", compileDocument);
 
 router.post("/upload/:emp_code", upload.single("file"), uploadEmployeeDocument);

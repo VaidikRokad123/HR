@@ -386,7 +386,7 @@ const buildEmployeeDocument = (seed, index, userId) => {
     companyOpensBank: false,
     permissionToUsePanAadhar: true,
     accountHolderName: seed.fullName,
-    bankNameBranch: [
+    bankName: [
       "HDFC Bank - Ahmedabad",
       "ICICI Bank - Mumbai",
       "Axis Bank - Bengaluru",
@@ -396,18 +396,18 @@ const buildEmployeeDocument = (seed, index, userId) => {
     ifscCode: `SEED000${num}`,
     salaryAccountNumber: `60100${accountSuffix}`,
     salaryIfsc: `SALR000${num}`,
-    gross: seed.gross,
-    ctc: seed.ctc,
+    grossPerMonth: seed.gross,
+    ctcPerYear: seed.ctc,
+    salaryPerMonth: Math.round(seed.gross * 0.9),
     pfApplicable: true,
     pfNumber: `PF-SEED-${num}`,
     uanNumber: `100200300${num}`,
     esicApplicable: seed.gross <= 50000,
     esicNumber: seed.gross <= 50000 ? `ESIC-SEED-${num}` : `ESIC-EXEMPT-${num}`,
     ptApplicable: true,
-    ptNumber: `PT-SEED-${num}`,
     tdsApplicable: seed.ctc >= 1000000,
     tdsRegime: seed.ctc >= 1000000 ? "New Regime" : "Old Regime",
-    form12bb: `FORM12BB-SEED-${num}`,
+    tdsDocProof: `TDSDOC-SEED-${num}`,
     pendingSections: [],
   };
 
@@ -421,8 +421,9 @@ const buildEmployeeDocument = (seed, index, userId) => {
   appendPayrollHistoryIfChanged(
     employee,
     {
-      ctc: seed.ctc,
-      gross: seed.gross,
+      ctcPerYear: seed.ctc,
+      grossPerMonth: seed.gross,
+      salaryPerMonth: Math.round(seed.gross * 0.9),
       pfApplicable: true,
       ptApplicable: true,
       esicApplicable: seed.gross <= 50000,

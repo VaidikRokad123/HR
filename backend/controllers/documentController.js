@@ -5,6 +5,7 @@ import {
   toCompatSections,
 } from "../utils/employeeCompat.js";
 import { buildOfferLetterStructuredData } from "../services/offerLetter/offerLetterDataBuilder.js";
+import { buildAppraisalLetterStructuredData } from "../utils/appraisalLetterDataBuilder.js";
 import { generatePDFFromData } from "../services/offerLetter/pdfGenerator.js";
 import {
   getLastOfferLetterData,
@@ -13,7 +14,7 @@ import {
 
 const DOCUMENT_TYPES = [
   { id: "offer-letter", label: "Offer Letter", available: true },
-  { id: "appraisal-letter", label: "Appraisal Letter", available: false },
+  { id: "appraisal-letter", label: "Appraisal Letter", available: true },
   {
     id: "experience-certificate",
     label: "Experience Certificate",
@@ -50,7 +51,7 @@ function pickKnownOfferValues(employee, override = {}) {
     startDate: professional.dateJoined
       ? new Date(professional.dateJoined).toISOString().slice(0, 10)
       : "",
-    salaryAmount: payroll.gross || payroll.ctc || "",
+    salaryAmount: payroll.grossPerMonth || payroll.ctcPerYear || "",
     companyName: process.env.COMPANY_NAME || "Saeculum Solutions Pvt. Ltd.",
     signatoryName: process.env.DOCUMENT_SIGNATORY_NAME || "HARDIKKUMAR VINZAVA",
     signatoryTitle: process.env.DOCUMENT_SIGNATORY_TITLE || "DIRECTOR",
@@ -71,6 +72,42 @@ function missingOfferFields(values) {
       : REQUIRED_OFFER_FIELDS;
 
   return required.filter((field) => !values[field]);
+}
+
+const REQUIRED_APPRAISAL_FIELDS = [
+  "name",
+  "gender",
+  "role",
+  "currentSalary",
+  "revisedSalaryDate",
+];
+
+function pickKnownAppraisalValues(employee, override = {}) {
+  const personal = employee.personal || {};
+  const professional = employee.professional || {};
+  const payroll = employee.payroll || {};
+
+  const values = {
+    name: personal.fullName || "",
+    gender: personal.gender ? String(personal.gender).toLowerCase() : "",
+    role: professional.jobTitle || "",
+    currentSalary: payroll.ctcPerYear || payroll.grossPerMonth || "",
+    revisedSalaryDate: "",
+    companyName: process.env.COMPANY_NAME || "Saeculum Solutions Pvt. Ltd.",
+    signatoryName: process.env.DOCUMENT_SIGNATORY_NAME || "HARDIKKUMAR VINZAVA",
+    signatoryTitle: process.env.DOCUMENT_SIGNATORY_TITLE || "DIRECTOR",
+    ...override,
+  };
+
+  if (values.gender && !["male", "female"].includes(values.gender)) {
+    values.gender = "";
+  }
+
+  return values;
+}
+
+function missingAppraisalFields(values) {
+  return REQUIRED_APPRAISAL_FIELDS.filter((field) => !values[field]);
 }
 
 async function loadEmployee(userId) {
@@ -182,6 +219,65 @@ export async function compileDocument(req, res) {
     res
       .status(500)
       .json({ message: "Failed to compile document", details: error.message });
+  }
+}
+
+export async function inspectAppraisalLetter(req, res) {
+  try {
+    const employee = await loadEmployee(req.params.userId);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    const values = pickKnownAppraisalValues(employee);
+
+    res.json({
+      documentType: "appraisal-letter",
+      employee: {
+        id: employee.user._id,
+        emp_code: employee.user.emp_code,
+        email: employee.user.email,
+        name: values.name,
+      },
+      values,
+      missingFields: missingAppraisalFields(values),
+    });
+  } catch (error) {
+    console.error("Inspect appraisal letter error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function prepareAppraisalLetter(req, res) {
+  try {
+    const employee = await loadEmployee(req.params.userId);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    const values = pickKnownAppraisalValues(employee, req.body || {});
+    const missingFields = missingAppraisalFields(values);
+    if (missingFields.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "Missing required fields", missingFields, values });
+    }
+
+    const data = buildAppraisalLetterStructuredData({
+      ...values,
+      documentType: "appraisal-letter",
+      employeeId: employee.user._id,
+      emp_code: employee.user.emp_code,
+    });
+
+    setLastOfferLetterData(data);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("Prepare appraisal letter error:", error);
+    const statusCode = error.message === "Missing required fields" ? 400 : 500;
+    res
+      .status(statusCode)
+      .json({ message: error.message || "Failed to prepare appraisal letter" });
   }
 }
 

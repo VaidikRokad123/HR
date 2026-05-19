@@ -52,8 +52,9 @@ router.post('/trigger-reminders', async (req, res) => {
 
 // @route   POST /api/employees/payroll/:id
 router.post('/payroll/:id', [
-  body('ctc').isNumeric(),
-  body('gross').isNumeric()
+  body('ctcPerYear').isNumeric(),
+  body('grossPerMonth').isNumeric(),
+  body('salaryPerMonth').isNumeric()
 ], addPayrollDetails);
 
 // @route   POST /api/employees/:id/sensitive-otp

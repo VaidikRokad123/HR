@@ -24,8 +24,9 @@ const NUMBER_FIELDS = new Set([
   "graduationYear",
   "probationMonths",
   "probationDuration",
-  "gross",
-  "ctc",
+  "grossPerMonth",
+  "ctcPerYear",
+  "salaryPerMonth",
 ]);
 
 const normalizeBlankValues = (value, key = "") => {
@@ -69,8 +70,8 @@ export const normalizeEmployeePayload = (payload = {}, extras = {}) => {
     update.probationMonths === undefined
   )
     update.probationMonths = payload.probationDuration;
-  if (payload.bankName !== undefined && update.bankNameBranch === undefined)
-    update.bankNameBranch = payload.bankName;
+  if (payload.bankNameBranch !== undefined && update.bankName === undefined)
+    update.bankName = payload.bankNameBranch;
   if (
     payload.personalAccountNumber !== undefined &&
     update.accountNumber === undefined
@@ -92,7 +93,7 @@ export const normalizeEmployeePayload = (payload = {}, extras = {}) => {
   delete update.jobTitle;
   delete update.workEmail;
   delete update.probationDuration;
-  delete update.bankName;
+  delete update.bankNameBranch;
   delete update.personalAccountNumber;
   delete update.personalIfsc;
   delete update.pf;
@@ -157,13 +158,26 @@ export const moduleDataToEmployeeUpdate = (module, data = {}) => {
     }
 
     case "professional":
-      return normalizeEmployeePayload(data);
+      return normalizeEmployeePayload({
+        ...data,
+        nameAsPerAadhaar: data.nameAsPerAadhaar,
+        attendanceBiometricId: data.attendanceBiometricId,
+      });
 
     case "bank":
       return normalizeEmployeePayload(data);
 
     case "payroll":
       return normalizeEmployeePayload(data);
+
+    case "education":
+      return normalizeEmployeePayload({
+        highestQualification: data.highestQualification,
+        graduationYear: data.graduationYear,
+        instituteName: data.instituteName,
+        previousEmployer: data.previousEmployer,
+        references: data.references,
+      });
 
     default:
       return null;
@@ -185,8 +199,9 @@ export const appendPayrollHistoryIfChanged = (
   changeType = "updated by admin",
 ) => {
   const next = {
-    ctc: data.ctc !== undefined ? Number(data.ctc) : employee.ctc,
-    gross: data.gross !== undefined ? Number(data.gross) : employee.gross,
+    ctc: data.ctcPerYear !== undefined ? Number(data.ctcPerYear) : employee.ctcPerYear,
+    gross: data.grossPerMonth !== undefined ? Number(data.grossPerMonth) : employee.grossPerMonth,
+    salary: data.salaryPerMonth !== undefined ? Number(data.salaryPerMonth) : employee.salaryPerMonth,
     pf:
       data.pfApplicable !== undefined
         ? data.pfApplicable
@@ -213,14 +228,15 @@ export const appendPayrollHistoryIfChanged = (
           : employee.tdsApplicable,
   };
 
-  const hasPayrollValue = [next.ctc, next.gross].some(
+  const hasPayrollValue = [next.ctc, next.gross, next.salary].some(
     (value) => value !== undefined && value !== null && value !== "",
   );
   if (!hasPayrollValue) return false;
 
   const changed = [
-    [employee.ctc, next.ctc],
-    [employee.gross, next.gross],
+    [employee.ctcPerYear, next.ctc],
+    [employee.grossPerMonth, next.gross],
+    [employee.salaryPerMonth, next.salary],
     [employee.pfApplicable, next.pf],
     [employee.ptApplicable, next.pt],
     [employee.esicApplicable, next.esic],
@@ -236,8 +252,9 @@ export const appendPayrollHistoryIfChanged = (
     });
   }
 
-  employee.ctc = next.ctc;
-  employee.gross = next.gross;
+  employee.ctcPerYear = next.ctc;
+  employee.grossPerMonth = next.gross;
+  employee.salaryPerMonth = next.salary;
   employee.pfApplicable = Boolean(next.pf);
   employee.ptApplicable = Boolean(next.pt);
   employee.esicApplicable = Boolean(next.esic);
@@ -289,6 +306,7 @@ export const toCompatSections = (employee, user = {}) => {
       highestQualification: plain.highestQualification,
       graduationYear: plain.graduationYear,
       instituteName: plain.instituteName,
+      previousEmployer: plain.previousEmployer,
       references: plain.references || [],
     },
     family: {
@@ -314,7 +332,8 @@ export const toCompatSections = (employee, user = {}) => {
     },
     professional: {
       ...base,
-      nameAsPerAadhaar: plain.fullName,
+      nameAsPerAadhaar: plain.nameAsPerAadhaar || plain.fullName,
+      attendanceBiometricId: plain.attendanceBiometricId,
       dateJoined: plain.dateJoining,
       dateJoining: plain.dateJoining,
       exitDate: plain.exitDate,
@@ -341,9 +360,12 @@ export const toCompatSections = (employee, user = {}) => {
           companyOpensBank: plain.companyOpensBank,
           panNumber: plain.panNumber,
           aadharNumber: plain.aadharNumber,
+          passportNumber: plain.passportNumber,
+          drivingLicence: plain.drivingLicence,
+          voterIdNumber: plain.voterIdNumber,
           permissionToUsePanAadhar: plain.permissionToUsePanAadhar,
-          bankName: plain.bankNameBranch,
-          bankNameBranch: plain.bankNameBranch,
+          bankName: plain.bankName,
+          bankNameBranch: plain.bankName,
           accountHolderName: plain.accountHolderName,
           branch: plain.branch,
           personalAccountNumber: plain.accountNumber,
@@ -357,8 +379,11 @@ export const toCompatSections = (employee, user = {}) => {
     payroll: hasPayrollDetails(plain)
       ? {
           ...base,
-          ctc: plain.ctc,
-          gross: plain.gross,
+          ctc: plain.ctcPerYear,
+          ctcPerYear: plain.ctcPerYear,
+          gross: plain.grossPerMonth,
+          grossPerMonth: plain.grossPerMonth,
+          salaryPerMonth: plain.salaryPerMonth,
           pf: plain.pfApplicable,
           pfApplicable: plain.pfApplicable,
           pt: plain.ptApplicable,
@@ -370,9 +395,8 @@ export const toCompatSections = (employee, user = {}) => {
           pfNumber: plain.pfNumber,
           uanNumber: plain.uanNumber,
           esicNumber: plain.esicNumber,
-          ptNumber: plain.ptNumber,
           tdsRegime: plain.tdsRegime,
-          form12bb: plain.form12bb,
+          tdsDocProof: plain.tdsDocProof,
           history: plain.payrollHistory || [],
           payrollHistory: plain.payrollHistory || [],
         }
@@ -384,14 +408,14 @@ export const hasBankDetails = (employee = {}) =>
   hasAnyValue(
     employee.panNumber,
     employee.aadharNumber,
-    employee.bankNameBranch,
+    employee.bankName,
     employee.accountHolderName,
     employee.accountNumber,
     employee.ifscCode,
   );
 
 export const hasPayrollDetails = (employee = {}) =>
-  hasAnyValue(employee.gross, employee.ctc);
+  hasAnyValue(employee.grossPerMonth, employee.ctcPerYear, employee.salaryPerMonth);
 
 const legacyContact = (contact) =>
   contact

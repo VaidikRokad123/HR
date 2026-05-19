@@ -78,12 +78,16 @@ export function buildHtmlContent(data, assets) {
       const processedContent = replaceVariables(para.content, data.metadata);
 
       switch (para.type) {
+        case 'title':
+          return `<div class="title">${escapeHtml(processedContent)}</div>`;
         case 'date':
           return `<div class="date">${escapeHtml(processedContent)}</div>`;
         case 'to':
           return `<div class="to-line">${processedContent}</div>`;
         case 'subject':
           return `<div class="subject">${escapeHtml(processedContent)}</div>`;
+        case 'info-line':
+          return `<div class="info-line">${escapeHtml(processedContent)}</div>`;
         case 'signature':
           return `<div class="signature-block avoid-break"><div>${processedContent}</div>${signUrl ? `<img src="${signUrl}" class="sign" />` : ''}</div>`;
         case 'company':
@@ -115,7 +119,9 @@ body{font-family:Arial,sans-serif;font-size:11pt;line-height:1.5;color:#000;prin
 .page-content{box-sizing:border-box;width:210mm;padding:45mm 25mm 34mm;position:relative;z-index:1;font-size:11pt;line-height:1.5;overflow:hidden;}
 p{text-align:justify;margin:0;line-height:1.5;text-justify:inter-word;word-wrap:break-word;overflow-wrap:break-word;}
 .paragraph-block{margin-bottom:4mm;padding-bottom:1mm;}
+.title{text-align:center;font-weight:700;font-size:14pt;margin-bottom:8mm;padding-bottom:1mm;}
 .date{text-align:right;margin-bottom:6mm;padding-bottom:1mm;white-space:nowrap;}
+.info-line{margin-bottom:2mm;padding-bottom:1mm;}
 .subject{text-align:center;font-weight:700;margin-top:4mm;margin-bottom:4mm;padding-bottom:1mm;}
 .to-line{line-height:1.5;margin-bottom:4mm;padding-bottom:1mm;}
 .signature-block{margin-top:6mm;line-height:1.5;margin-bottom:4mm;padding-bottom:2mm;}

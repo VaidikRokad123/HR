@@ -32,6 +32,8 @@ export const professionalFields = {
   workMobile: { type: String, default: NA, trim: true },
   laptopAssigned: { type: String, default: NA, trim: true },
   linkedinUrl: { type: String, default: NA, trim: true },
+  attendanceBiometricId: { type: String, default: NA, trim: true },
+  nameAsPerAadhaar: { type: String, default: NA, trim: true },
   inProbation: { type: Boolean, default: true },
   probationEndedNotified: { type: Boolean, default: false },
 };

@@ -48,24 +48,24 @@ const toEmployeeModelPayload = (emp) => {
     address: emp.address,
     bank: {
       ...emp.bank,
-      bankNameBranch: emp.bank?.bankNameBranch || emp.bank?.bankName || "",
+      bankName: emp.bank?.bankName || emp.bank?.bankNameBranch || "",
       accountNumber:
         emp.bank?.accountNumber || emp.bank?.personalAccountNumber || "",
       ifscCode: emp.bank?.ifscCode || emp.bank?.personalIfsc || "",
     },
     payroll: {
-      gross: emp.payroll?.gross || "",
-      ctc: emp.payroll?.ctc || "",
+      grossPerMonth: emp.payroll?.grossPerMonth || "",
+      ctcPerYear: emp.payroll?.ctcPerYear || "",
+      salaryPerMonth: emp.payroll?.salaryPerMonth || "",
       pfApplicable: emp.payroll?.pfApplicable === true,
       pfNumber: emp.payroll?.pfNumber || "",
       uanNumber: emp.payroll?.uanNumber || "",
       esicApplicable: emp.payroll?.esicApplicable === true,
       esicNumber: emp.payroll?.esicNumber || "",
       ptApplicable: emp.payroll?.ptApplicable === true,
-      ptNumber: emp.payroll?.ptNumber || "",
       tdsApplicable: emp.payroll?.tdsApplicable === true,
       tdsRegime: emp.payroll?.tdsRegime || "",
-      form12bb: emp.payroll?.form12bb || "",
+      tdsDocProof: emp.payroll?.tdsDocProof || "",
     },
     emergency: {
       emergencyContacts: [
@@ -249,7 +249,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               companyOpensBank: row.CompanyOpensBank === "Yes",
               panNumber: row.PANNumber || "",
               aadharNumber: row.AadharNumber || "",
-              bankName: row.BankNameBranch || row.BankName || "",
+              bankName: row.BankName || row["Bank Name"] || row.BankNameBranch || "",
               accountHolderName: row.AccountHolderName || "",
               branch: row.Branch || "",
               personalAccountNumber: row.AccountNumber || row.PersonalAccountNumber || "",
@@ -258,18 +258,18 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               salaryIfsc: row.SalaryIFSC || "",
             },
             payroll: {
-              gross: row.Gross || "",
-              ctc: row.CTC || "",
+              grossPerMonth: row.GrossPerMonth || row.Gross || "",
+              ctcPerYear: row.CTCPerYear || row.CTC || "",
+              salaryPerMonth: row.SalaryPerMonth || "",
               pfApplicable: row.PFApplicable === "Yes",
               pfNumber: row.PFNumber || "",
               uanNumber: row.UANNumber || "",
               esicApplicable: row.ESICApplicable === "Yes",
               esicNumber: row.ESICNumber || "",
               ptApplicable: row.PTApplicable === "Yes",
-              ptNumber: row.PTNumber || "",
               tdsApplicable: row.TDSApplicable === "Yes",
               tdsRegime: row.TDSRegime || "",
-              form12bb: row.Form12BB || "",
+              tdsDocProof: row.TDSDOCProof || "",
             },
             emergency: {
               emergencyContact1: { name: row.PrimaryContactName || "", relationship: row.PrimaryContactRelationship || "", mobile: row.PrimaryContactMobile || "" },
@@ -356,18 +356,18 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                   salaryIfsc: "",
                 },
                 payroll: {
-                  gross: "",
-                  ctc: "",
+                  grossPerMonth: "",
+                  ctcPerYear: "",
+                  salaryPerMonth: "",
                   pfApplicable: false,
                   pfNumber: "",
                   uanNumber: "",
                   esicApplicable: false,
                   esicNumber: "",
                   ptApplicable: false,
-                  ptNumber: "",
                   tdsApplicable: false,
                   tdsRegime: "",
-                  form12bb: "",
+                  tdsDocProof: "",
                 },
                 emergency: {
                   emergencyContact1: { name: "", relationship: "", mobile: "" },
@@ -502,7 +502,7 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               companyOpensBank: row.CompanyOpensBank === "Yes",
               panNumber: row.PANNumber || "",
               aadharNumber: row.AadharNumber || "",
-              bankName: row.BankNameBranch || row.BankName || "",
+              bankName: row.BankName || row["Bank Name"] || row.BankNameBranch || "",
               accountHolderName: row.AccountHolderName || "",
               branch: row.Branch || "",
               personalAccountNumber:
@@ -519,18 +519,18 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
             if (row.EmpCode) emp.emp_code = row.EmpCode;
             emp.payroll = {
               ...emp.payroll,
-              gross: row.Gross || "",
-              ctc: row.CTC || "",
+              grossPerMonth: row.GrossPerMonth || row.Gross || "",
+              ctcPerYear: row.CTCPerYear || row.CTC || "",
+              salaryPerMonth: row.SalaryPerMonth || "",
               pfApplicable: row.PFApplicable === "Yes",
               pfNumber: row.PFNumber || "",
               uanNumber: row.UANNumber || "",
               esicApplicable: row.ESICApplicable === "Yes",
               esicNumber: row.ESICNumber || "",
               ptApplicable: row.PTApplicable === "Yes",
-              ptNumber: row.PTNumber || "",
               tdsApplicable: row.TDSApplicable === "Yes",
               tdsRegime: row.TDSRegime || "",
-              form12bb: row.Form12BB || "",
+              tdsDocProof: row.TDSDOCProof || "",
             };
           });
 
@@ -925,18 +925,18 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                       <th>Salary IFSC</th>
 
                       {/* Payroll */}
-                      <th>Gross</th>
-                      <th>CTC</th>
+                      <th>Gross Per Month</th>
+                      <th>CTC Per Year</th>
+                      <th>Salary Per Month</th>
                       <th>PF Applicable</th>
                       <th>PF Number</th>
                       <th>UAN Number</th>
                       <th>ESIC Applicable</th>
                       <th>ESIC Number</th>
                       <th>PT Applicable</th>
-                      <th>PT Number</th>
                       <th>TDS Applicable</th>
                       <th>TDS Regime</th>
-                      <th>Form 12BB</th>
+                      <th>TDS DOC PROOF</th>
 
                       {/* Emergency */}
                       <th>E1 Name</th>
@@ -1904,9 +1904,9 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                         <td>
                           <input
                             type="number"
-                            value={emp.payroll.gross}
+                            value={emp.payroll.grossPerMonth}
                             onChange={(e) =>
-                              handleFieldChange(index, "payroll", "gross", e.target.value)
+                              handleFieldChange(index, "payroll", "grossPerMonth", e.target.value)
                             }
                             className="bulk-cell-input-small"
                             style={{ width: "90px" }}
@@ -1915,9 +1915,20 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                         <td>
                           <input
                             type="number"
-                            value={emp.payroll.ctc}
+                            value={emp.payroll.ctcPerYear}
                             onChange={(e) =>
-                              handleFieldChange(index, "payroll", "ctc", e.target.value)
+                              handleFieldChange(index, "payroll", "ctcPerYear", e.target.value)
+                            }
+                            className="bulk-cell-input-small"
+                            style={{ width: "90px" }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={emp.payroll.salaryPerMonth}
+                            onChange={(e) =>
+                              handleFieldChange(index, "payroll", "salaryPerMonth", e.target.value)
                             }
                             className="bulk-cell-input-small"
                             style={{ width: "90px" }}
@@ -1983,17 +1994,6 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                             }
                           />
                         </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={emp.payroll.ptNumber}
-                            onChange={(e) =>
-                              handleFieldChange(index, "payroll", "ptNumber", e.target.value)
-                            }
-                            className="bulk-cell-input-small"
-                            style={{ width: "100px" }}
-                          />
-                        </td>
                         <td style={{ textAlign: "center" }}>
                           <input
                             type="checkbox"
@@ -2020,9 +2020,9 @@ const BulkUploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
                         <td>
                           <input
                             type="text"
-                            value={emp.payroll.form12bb}
+                            value={emp.payroll.tdsDocProof}
                             onChange={(e) =>
-                              handleFieldChange(index, "payroll", "form12bb", e.target.value)
+                              handleFieldChange(index, "payroll", "tdsDocProof", e.target.value)
                             }
                             className="bulk-cell-input-small"
                             style={{ width: "90px" }}

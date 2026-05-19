@@ -33,10 +33,10 @@ export const referenceSchema = new mongoose.Schema(
 
 export const payrollHistorySchema = new mongoose.Schema(
   {
-    ctc: Number,
-    gross: Number,
+    ctcPerYear: Number,
+    grossPerMonth: Number,
+    salaryPerMonth: Number,
     pf: Boolean,
-    pt: Boolean,
     esic: Boolean,
     tds: Boolean,
     updatedAt: { type: Date, default: Date.now },

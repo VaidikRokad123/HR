@@ -108,10 +108,11 @@ const COMPLETION_FIELD_LABELS = {
   officialEmail: "Official email",
   workMobile: "Work mobile",
   laptopAssigned: "Laptop assigned",
-  gross: "Gross salary",
-  ctc: "CTC",
+  grossPerMonth: "Gross per month",
+  ctcPerYear: "CTC per year",
+  salaryPerMonth: "Salary per month",
   accountHolderName: "Account holder name",
-  bankNameBranch: "Bank name & branch",
+  bankName: "Bank name",
   accountNumber: "Account number",
   ifscCode: "IFSC code",
   pfApplicable: "PF applicable",
@@ -120,9 +121,8 @@ const COMPLETION_FIELD_LABELS = {
   esicApplicable: "ESIC applicable",
   esicNumber: "ESIC number",
   ptApplicable: "PT applicable",
-  ptNumber: "PT number",
   tdsRegime: "TDS regime",
-  form12bb: "Form 12BB",
+  tdsDocProof: "TDS DOC PROOF",
 };
 
 const MODEL_PROGRESS_SECTIONS = [
@@ -192,10 +192,11 @@ const MODEL_PROGRESS_SECTIONS = [
     key: "payroll",
     label: "Payroll",
     fields: [
-      "gross",
-      "ctc",
+      "grossPerMonth",
+      "ctcPerYear",
+      "salaryPerMonth",
       "accountHolderName",
-      "bankNameBranch",
+      "bankName",
       "accountNumber",
       "ifscCode",
       "pfApplicable",
@@ -204,9 +205,8 @@ const MODEL_PROGRESS_SECTIONS = [
       "esicApplicable",
       "esicNumber",
       "ptApplicable",
-      "ptNumber",
       "tdsRegime",
-      "form12bb",
+      "tdsDocProof",
     ],
   },
 ];
@@ -671,7 +671,7 @@ export const bulkUploadEmployees = async (req, res) => {
             emp_code: user.emp_code,
           });
         employee.set(payload);
-        if (payload.ctc || payload.gross)
+        if (payload.ctcPerYear || payload.grossPerMonth || payload.salaryPerMonth)
           appendPayrollHistoryIfChanged(
             employee,
             payload,
@@ -725,7 +725,7 @@ const isCompleteEmployeeProfile = (employee) => {
       employee.permissionToUsePanAadhar,
     );
   return Boolean(
-    employee.bankNameBranch && employee.accountNumber && employee.ifscCode,
+    employee.bankName && employee.accountNumber && employee.ifscCode,
   );
 };
 

@@ -64,22 +64,63 @@ export function estimateBlockHeightMm(para, metadata, replaceVariables = (value)
   const plainText = stripHtml(content).trim();
 
   switch (para.type) {
+    case 'title': {
+      const titleFontMm = 14 * 0.352778 * 1.5;
+      const lineCount = Math.max(1, estimateWrappedLineCountWithWidth(plainText, 14));
+      return (lineCount * titleFontMm) + 5;
+    }
     case 'date':
-      return LINE_MM + 7;
+      return LINE_MM + 4;
     case 'to':
-      return (Math.max(1, content.split(/<br\s*\/?>/i).length) * LINE_MM) + 5;
+      return (Math.max(1, content.split(/<br\s*\/?>/i).length) * LINE_MM) + 3;
     case 'subject':
-      return LINE_MM + 9;
+      return LINE_MM + 5;
+    case 'info-line':
+      return LINE_MM + 2;
     case 'signature':
-      return (Math.max(1, content.split(/<br\s*\/?>/i).length) * LINE_MM) + 27;
+      return (Math.max(1, content.split(/<br\s*\/?>/i).length) * LINE_MM) + 18;
     case 'company':
     case 'separator':
-      return LINE_MM + 10;
+      return LINE_MM + 6;
     case 'footer':
-      return (estimateWrappedLineCount(content) * LINE_MM) + 5;
+      return (estimateWrappedLineCount(content) * LINE_MM) + 3;
     case 'image':
       return 75;
     default:
-      return (estimateWrappedLineCount(plainText) * LINE_MM) + 5;
+      return (estimateWrappedLineCount(plainText) * LINE_MM) + 3;
   }
+}
+
+function estimateWrappedLineCountWithWidth(text = '', fontSizePt) {
+  const plain = stripHtml(text).replace(/\s+/g, ' ').trim();
+  if (!plain) return 1;
+
+  const fontMm = fontSizePt * 0.352778;
+  const unitWidthMm = fontMm * 0.48;
+  const maxUnitsPerLine = Math.max(1, CONTENT_WIDTH_MM / unitWidthMm);
+  const words = plain.split(' ');
+
+  let lines = 1;
+  let currentUnits = 0;
+
+  for (const word of words) {
+    const wordUnits = estimateTextUnits(word);
+    const withSpace = currentUnits === 0 ? wordUnits : wordUnits + 0.33;
+
+    if (withSpace > maxUnitsPerLine) {
+      const forcedLines = Math.max(1, Math.ceil(wordUnits / maxUnitsPerLine));
+      lines += forcedLines - (currentUnits === 0 ? 0 : 1);
+      currentUnits = wordUnits % maxUnitsPerLine;
+      continue;
+    }
+
+    if (currentUnits + withSpace > maxUnitsPerLine) {
+      lines += 1;
+      currentUnits = wordUnits;
+    } else {
+      currentUnits += withSpace;
+    }
+  }
+
+  return Math.max(1, lines);
 }
